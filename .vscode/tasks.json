@@ -8,25 +8,17 @@
             "label": "pnpm: dev",
             "isBackground": true,
             "problemMatcher": {
-                "pattern": {
-                    "regexp": "^.*$"
-                },
+                "pattern": { "regexp": "^.*$" },
                 "background": {
                     "activeOnStart": true,
-                    "beginsPattern": ".*",
-                    "endsPattern": ".*(built|compiled|finished).*"
+                    "beginsPattern": "^.*$",
+                    "endsPattern": "^.*$"
                 }
             },
-            "presentation": {
-                "reveal": "silent",
-                "panel": "dedicated"
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "presentation": { "reveal": "silent", "panel": "dedicated" },
+            "group": { "kind": "build", "isDefault": true },
             "options": {
-                "cwd": "${workspaceFolder}/apps/vscode-extension"
+                "cwd": "${workspaceFolder}/packages/vscode-extension"
             }
         },
         {
@@ -36,22 +28,17 @@
             "label": "pnpm: watch",
             "isBackground": true,
             "problemMatcher": {
-                "pattern": {
-                    "regexp": "^.*$"
-                },
+                "pattern": { "regexp": "^.*$" },
                 "background": {
                     "activeOnStart": true,
-                    "beginsPattern": ".*",
-                    "endsPattern": ".*(built|compiled|finished).*"
+                    "beginsPattern": "^.*$",
+                    "endsPattern": "^.*$"
                 }
             },
-            "presentation": {
-                "reveal": "silent",
-                "panel": "dedicated"
-            },
+            "presentation": { "reveal": "silent", "panel": "dedicated" },
             "group": "build",
             "options": {
-                "cwd": "${workspaceFolder}/apps/vscode-extension"
+                "cwd": "${workspaceFolder}/packages/vscode-extension"
             }
         }
     ]

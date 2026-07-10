@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import { fetchAtCoderProblem, fetchAtCoderTasks, CfError } from "./atcoder";
 
 const log = {
   info: (...args: any[]) => {
@@ -37,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
         try {
           const panel = vscode.window.createWebviewPanel(
             "templateWebview",
-            "Template Webview",
+            "AtCoder 题目浏览器",
             vscode.ViewColumn.One,
             {
               enableScripts: true,
@@ -55,16 +56,68 @@ export function activate(context: vscode.ExtensionContext) {
 
           panel.webview.html = getWebviewContent(webviewJsSrc);
 
-          // 处理来自 webview 的消息
+          const sendToWebview = (payload: unknown) => {
+            panel.webview.postMessage(payload);
+          };
+
+          const handleCfError = (err: CfError) => {
+            const open = "在浏览器中打开";
+            vscode.window.showErrorMessage(err.message, open).then((choice) => {
+              if (choice === open) {
+                vscode.env.openExternal(vscode.Uri.parse(err.url));
+              }
+            });
+          };
+
+          const loadContest = async (contest: string) => {
+            sendToWebview({ type: "loading", text: `正在抓取 ${contest} 的题目列表...` });
+            try {
+              const tasks = await fetchAtCoderTasks(contest);
+              sendToWebview({ type: "tasks", tasks });
+            } catch (error) {
+              if (error instanceof CfError) {
+                handleCfError(error);
+                sendToWebview({ type: "cf_challenge", url: error.url });
+                return;
+              }
+              sendToWebview({ type: "error", text: error instanceof Error ? error.message : "抓取题目失败" });
+            }
+          };
+
+          const loadProblem = async (contest: string, task: string) => {
+            sendToWebview({ type: "loading", text: `正在抓取 ${contest}/${task} 的题面...` });
+            try {
+              const problem = await fetchAtCoderProblem(contest, task);
+              sendToWebview({ type: "problem", problem });
+            } catch (error) {
+              if (error instanceof CfError) {
+                handleCfError(error);
+                sendToWebview({ type: "cf_challenge", url: error.url });
+                return;
+              }
+              sendToWebview({ type: "error", text: error instanceof Error ? error.message : "抓取题面失败" });
+            }
+          };
+
           panel.webview.onDidReceiveMessage(
-            message => {
+            async (message) => {
               switch (message.command) {
-                case 'alert':
+                case "loadContest":
+                  await loadContest(message.contest);
+                  return;
+                case "loadProblem":
+                  await loadProblem(message.contest, message.task);
+                  return;
+                case "openBrowser":
+                  if (message.url) {
+                    vscode.env.openExternal(vscode.Uri.parse(message.url));
+                  }
+                  return;
+                case "alert":
                   vscode.window.showInformationMessage(message.text);
-                  // 发送响应回 webview
-                  panel.webview.postMessage({ 
-                    type: 'update',
-                    text: `Extension received: ${message.text}`
+                  sendToWebview({
+                    type: "update",
+                    text: `Extension received: ${message.text}`,
                   });
                   return;
               }
@@ -72,6 +125,7 @@ export function activate(context: vscode.ExtensionContext) {
             undefined,
             context.subscriptions
           );
+
         } catch (error) {
           log.error("Failed to show webview:", error);
         }

@@ -1,9 +1,9 @@
 import React from "react";
 import { Button, Card, Input, Spinner } from "@template/ui";
-// import '@template/ui/styles.css';
 import "./styles.css";
 
 import { useVSCode } from "./VSCodeProvider";
+import type { WebviewMessage } from "./types";
 
 export interface WebviewAppProps {
   title?: string;
@@ -13,48 +13,58 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   title = "VSCode Extension",
 }) => {
   const vscode = useVSCode();
-  const [messages, setMessages] = React.useState<
-    Array<{ text: string; timestamp: number; type: "sent" | "received" }>
-  >([]);
-  const [inputMessage, setInputMessage] = React.useState("");
+  const [contest, setContest] = React.useState("abc345");
+  const [tasks, setTasks] = React.useState<Array<{ label: string; value: string; url: string }>>([]);
+  const [selectedTask, setSelectedTask] = React.useState<string>("");
+  const [problem, setProblem] = React.useState<any>(null);
+  const [status, setStatus] = React.useState("输入比赛代号并加载题目列表");
   const [isLoading, setIsLoading] = React.useState(false);
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const [cfUrl, setCfUrl] = React.useState<string | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const loadContest = async (nextContest: string) => {
+    setIsLoading(true);
+    setStatus(`正在加载 ${nextContest} 的题目...`);
+    vscode.postMessage({ command: "loadContest", contest: nextContest });
   };
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return;
-
+  const loadProblem = async (nextContest: string, task: string) => {
     setIsLoading(true);
-    try {
-      const message = inputMessage.trim();
-      vscode.postMessage({ command: "alert", text: message });
-      setMessages((prev) => [
-        ...prev,
-        { text: message, timestamp: Date.now(), type: "sent" },
-      ]);
-      setInputMessage("");
-      scrollToBottom();
-      inputRef.current?.focus();
-    } catch (error) {
-      vscode.postMessage({ command: "error", text: "消息发送失败" });
-    } finally {
-      setIsLoading(false);
-    }
+    setStatus(`正在抓取 ${nextContest}/${task} 的题面...`);
+    vscode.postMessage({ command: "loadProblem", contest: nextContest, task });
   };
 
   React.useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  React.useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const message = event.data;
-      if (message.type === "update") {
-        setMessages((prev) => [
-          ...prev,
-          { text: message.text, timestamp: Date.now(), type: "received" },
-        ]);
-        scrollToBottom();
+      const message = event.data as WebviewMessage;
+      if (message.type === "tasks") {
+        const nextTasks = message.tasks ?? [];
+        setTasks(nextTasks);
+        setSelectedTask("");
+        setProblem(null);
+        setStatus(`已加载 ${nextTasks.length} 道题目`);
+        setIsLoading(false);
+      }
+      if (message.type === "problem") {
+        setProblem(message.problem ?? null);
+        setStatus(`已加载题面：${message.problem?.title ?? ""}`);
+        setIsLoading(false);
+      }
+      if (message.type === "loading") {
+        setStatus(message.text ?? "加载中...");
+      }
+      if (message.type === "error") {
+        setStatus(message.text ?? "操作失败");
+        setIsLoading(false);
+      }
+      if (message.type === "cf_challenge") {
+        setCfUrl(message.url ?? null);
+        setIsLoading(false);
+        setStatus("AtCoder 需要 Cloudflare 验证，请在浏览器中完成验证后重试");
       }
     };
 
@@ -62,18 +72,16 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  React.useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  const getStatusColor = () => {
+  function getStatusColor() {
     if (isLoading) return "bg-yellow-500";
-    return messages.length > 0 ? "bg-green-500" : "bg-blue-500";
-  };
+    if (status.includes("失败") || status.includes("Error")) return "bg-red-500";
+    if (tasks.length > 0 || problem) return "bg-green-500";
+    return "bg-gray-500";
+  }
 
   return (
     <div className="h-screen flex flex-col">
-      {/* VSCode 风格的标题栏 */}
+      {/* 标题栏 */}
       <div className="h-[35px] flex items-center px-3 bg-[var(--vscode-titleBar-activeBackground)] text-[var(--vscode-titleBar-activeForeground)]">
         <div className="flex items-center space-x-2">
           <span
@@ -83,89 +91,132 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
           <span className="text-[13px] select-none">{title}</span>
         </div>
       </div>
-      {/* 主内容区 */}
+      {/* 主内容 */}
       <div className="flex-1 flex flex-col bg-[var(--vscode-editor-background)] text-[var(--vscode-editor-foreground)]">
-        {/* 消息区域 */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full space-y-3 select-none">
-              <div className="text-3xl opacity-30">⌘</div>
-              <div className="flex items-center space-x-1.5 text-[12px] opacity-60">
-                <span className="px-1.5 py-0.5 bg-[var(--vscode-button-secondaryBackground)] rounded">
-                  Ctrl
-                </span>
-                <span>+</span>
-                <span className="px-1.5 py-0.5 bg-[var(--vscode-button-secondaryBackground)] rounded">
-                  Enter
-                </span>
-                <span>发送消息</span>
+        <div className="p-3 border-b border-[var(--vscode-panel-border)] space-y-2">
+          <div className="flex items-center gap-2">
+            <Input
+              ref={inputRef}
+              value={contest}
+              onChange={(e) => setContest(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && void loadContest(contest)}
+              placeholder="输入比赛代号，如 abc345"
+              className="flex-1 h-[28px] text-[12px]"
+              disabled={isLoading}
+            />
+            <Button onClick={() => void loadContest(contest)} disabled={isLoading} className="h-[28px] text-[12px]">
+              加载题目
+            </Button>
+          </div>
+          <div className="text-[12px] opacity-70">{status}</div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          {tasks.length > 0 && (
+            <Card className="p-3 space-y-2">
+              <div className="text-[13px] font-semibold">题目列表</div>
+              <div className="flex flex-wrap gap-2">
+                {tasks.map((task) => (
+                  <Button
+                    key={task.value}
+                    variant={selectedTask === task.value ? "primary" : "secondary"}
+                    size="sm"
+                    onClick={() => {
+                      setSelectedTask(task.value);
+                      void loadProblem(contest, task.value);
+                    }}
+                  >
+                    {task.label}
+                  </Button>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {problem && (
+            <Card className="p-3 space-y-3">
+              <div className="space-y-1">
+                <div className="text-[13px] font-semibold">{problem.title}</div>
+                <div className="text-[12px] opacity-60">{problem.url}</div>
+              </div>
+
+              {problem.statement && (
+                <div className="space-y-1">
+                  <div className="text-[12px] font-semibold">题面</div>
+                  <div className="text-[12px] whitespace-pre-wrap break-words">{problem.statement}</div>
+                </div>
+              )}
+
+              {problem.constraints && (
+                <div className="space-y-1">
+                  <div className="text-[12px] font-semibold">约束</div>
+                  <div className="text-[12px] whitespace-pre-wrap break-words">{problem.constraints}</div>
+                </div>
+              )}
+
+              {problem.inputFormat && (
+                <div className="space-y-1">
+                  <div className="text-[12px] font-semibold">输入格式</div>
+                  <div className="text-[12px] whitespace-pre-wrap break-words">{problem.inputFormat}</div>
+                </div>
+              )}
+
+              {problem.outputFormat && (
+                <div className="space-y-1">
+                  <div className="text-[12px] font-semibold">输出格式</div>
+                  <div className="text-[12px] whitespace-pre-wrap break-words">{problem.outputFormat}</div>
+                </div>
+              )}
+
+              {problem.samples?.length > 0 ? (
+                problem.samples.map((sample: any) => (
+                  <div key={sample.index} className="space-y-2">
+                    <div className="text-[12px] font-semibold">Sample {sample.index}</div>
+                    <div className="rounded bg-[var(--vscode-input-background)] p-2">
+                      <div className="text-[11px] opacity-60 mb-1">Input</div>
+                      <pre className="text-[12px] whitespace-pre-wrap break-words">{sample.input}</pre>
+                    </div>
+                    <div className="rounded bg-[var(--vscode-input-background)] p-2">
+                      <div className="text-[11px] opacity-60 mb-1">Output</div>
+                      <pre className="text-[12px] whitespace-pre-wrap break-words">{sample.output}</pre>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-[12px] opacity-60">当前题目没有找到样例。</div>
+              )}
+            </Card>
+          )}
+
+          {!isLoading && tasks.length === 0 && !problem && !cfUrl && (
+            <div className="flex flex-col items-center justify-center h-full text-[12px] opacity-60">
+              请输入比赛代号，例如 abc345，然后点击加载题目。
+            </div>
+          )}
+
+          {cfUrl && (
+            <div className="p-6 flex flex-col items-center justify-center h-full gap-4">
+              <div className="text-[14px] font-medium text-yellow-600">需要 Cloudflare 验证</div>
+              <div className="text-[12px] opacity-70 text-center max-w-md">
+                AtCoder 触发了 Cloudflare 验证，请在浏览器中完成验证后重试。
+              </div>
+              <div className="flex gap-3 mt-2">
+                <Button onClick={() => vscode.postMessage({ command: "openBrowser", url: cfUrl })} className="h-[32px] text-[12px]">
+                  在浏览器中打开
+                </Button>
+                <Button onClick={() => { setCfUrl(null); void loadContest(contest); }} className="h-[32px] text-[12px]">
+                  验证完成，重试
+                </Button>
               </div>
             </div>
           )}
-          {messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`flex ${msg.type === "sent" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[85%] rounded-[4px] px-2.5 py-2 ${
-                  msg.type === "sent"
-                    ? "bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)]"
-                    : "bg-[var(--vscode-input-background)]"
-                }`}
-              >
-                <pre className="text-[12px] font-mono whitespace-pre-wrap break-words leading-5">
-                  <code>{msg.text}</code>
-                </pre>
-                <div className="flex items-center space-x-2 mt-1">
-                  <span className="text-[10px] font-mono opacity-50">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </span>
-                  <span className="text-[10px] opacity-50">
-                    {msg.type === "sent" ? "> sent" : "< received"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
 
-        {/* 输入区域 */}
-        <div className="border-t border-[var(--vscode-panel-border)] bg-[var(--vscode-editor-background)] p-3">
-          <div className="flex space-x-2">
-            <div className="flex-1 relative">
-              <Input
-                ref={inputRef}
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                placeholder="输入命令..."
-                className="w-full h-[24px] text-[12px] font-mono"
-                disabled={isLoading}
-              />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] opacity-40 select-none pointer-events-none">
-                Press Ctrl+Enter to send
-              </div>
+          {isLoading && (
+            <div className="flex items-center gap-2 text-[12px] opacity-70">
+              <Spinner size="sm" />
+              <span>正在抓取数据...</span>
             </div>
-            <Button
-              onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading}
-              className="h-[24px] min-w-[80px] text-[12px] font-mono"
-            >
-              {isLoading ? (
-                <div className="flex items-center space-x-1.5">
-                  <Spinner size="sm" />
-                  <span>执行中</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-1.5">
-                  <span>执行</span>
-                  <span className="opacity-60">⌘⏎</span>
-                </div>
-              )}
-            </Button>
-          </div>
+          )}
         </div>
       </div>
     </div>

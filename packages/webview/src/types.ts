@@ -1,8 +1,13 @@
 export interface WebviewMessage {
   type?: string;
-  command?: 'alert' | 'error';
+  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser';
   text?: string;
+  contest?: string;
+  task?: string;
   payload?: any;
+  url?: string;
+  tasks?: Array<{ label: string; value: string; url: string }>;
+  problem?: any;
 }
 
 export interface VSCodeAPI {
@@ -17,4 +22,4 @@ declare global {
   }
 }
 
-export {};
+export { };

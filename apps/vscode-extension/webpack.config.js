@@ -70,6 +70,9 @@ const webviewConfig = {
             loader: "ts-loader",
             options: {
               transpileOnly: true,
+              compilerOptions: {
+                rootDir: path.resolve(__dirname, "../../"),
+              },
             },
           },
         ],
