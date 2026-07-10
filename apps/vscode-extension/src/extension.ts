@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import * as https from "https";
 import { fetchAtCoderProblem, fetchAtCoderTasks, CfError } from "./atcoder";
 
 const log = {
@@ -32,6 +33,21 @@ export function activate(context: vscode.ExtensionContext) {
   log.info("Extension is now active!");
 
   try {
+    context.subscriptions.push(
+      vscode.commands.registerCommand("extension.setDeeplApiKey", async () => {
+        const key = await vscode.window.showInputBox({
+          prompt: "请输入 DeepL API Key",
+          password: true,
+          placeHolder: "例如 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:fx",
+          ignoreFocusOut: true,
+        });
+        if (key?.trim()) {
+          await context.secrets.store("deeplApiKey", key.trim());
+          vscode.window.showInformationMessage("DeepL API Key 已保存");
+        }
+      })
+    );
+
     let disposable = vscode.commands.registerCommand(
       "extension.showWebview",
       () => {
@@ -99,6 +115,53 @@ export function activate(context: vscode.ExtensionContext) {
             }
           };
 
+          const translateText = async (text: string, targetLang: string): Promise<string> => {
+            const apiKey = await context.secrets.get("deeplApiKey");
+            if (!apiKey) {
+              const set = "设置 API Key";
+              const choice = await vscode.window.showErrorMessage("请先设置 DeepL API Key", set);
+              if (choice === set) {
+                vscode.commands.executeCommand("extension.setDeeplApiKey");
+              }
+              throw new Error("未设置 DeepL API Key");
+            }
+
+            return new Promise((resolve, reject) => {
+              const params = new URLSearchParams({ text, target_lang: targetLang });
+              const host = apiKey.endsWith(":fx") ? "api-free.deepl.com" : "api.deepl.com";
+              const req = https.request(
+                {
+                  hostname: host,
+                  path: "/v2/translate",
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    Authorization: `DeepL-Auth-Key ${apiKey}`,
+                  },
+                },
+                (res) => {
+                  let data = "";
+                  res.on("data", (chunk) => (data += chunk));
+                  res.on("end", () => {
+                    try {
+                      const json = JSON.parse(data);
+                      if (res.statusCode && res.statusCode >= 400) {
+                        reject(new Error(json.message || `翻译接口错误 (${res.statusCode})`));
+                        return;
+                      }
+                      resolve(json.translations?.[0]?.text ?? text);
+                    } catch {
+                      reject(new Error("翻译接口返回异常"));
+                    }
+                  });
+                }
+              );
+              req.on("error", () => reject(new Error("翻译请求失败")));
+              req.write(params.toString());
+              req.end();
+            });
+          };
+
           panel.webview.onDidReceiveMessage(
             async (message) => {
               switch (message.command) {
@@ -113,6 +176,34 @@ export function activate(context: vscode.ExtensionContext) {
                     vscode.env.openExternal(vscode.Uri.parse(message.url));
                   }
                   return;
+                case "translate": {
+                  try {
+                    const targetLang = message.targetLang ?? "ZH";
+                    const texts: Record<string, string> = message.payload ?? {};
+                    const translated: Record<string, string> = {};
+                    for (const [key, value] of Object.entries(texts)) {
+                      if (typeof value === "string" && value.trim()) {
+                        sendToWebview({ type: "loading", text: `正在翻译 ${key}...` });
+                        translated[key] = await translateText(value, targetLang);
+                      }
+                    }
+                    sendToWebview({ type: "translation", translated });
+                  } catch (error) {
+                    sendToWebview({
+                      type: "error",
+                      text: error instanceof Error ? error.message : "翻译失败",
+                    });
+                  }
+                  return;
+                }
+                case "setApiKey": {
+                  const key = message.text?.trim();
+                  if (key) {
+                    await context.secrets.store("deeplApiKey", key);
+                    vscode.window.showInformationMessage("DeepL API Key 已保存");
+                  }
+                  return;
+                }
                 case "alert":
                   vscode.window.showInformationMessage(message.text);
                   sendToWebview({

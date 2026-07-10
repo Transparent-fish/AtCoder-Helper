@@ -20,6 +20,8 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   const [status, setStatus] = React.useState("输入比赛代号并加载题目列表");
   const [isLoading, setIsLoading] = React.useState(false);
   const [cfUrl, setCfUrl] = React.useState<string | null>(null);
+  const [translated, setTranslated] = React.useState<Record<string, string> | null>(null);
+  const [translating, setTranslating] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const loadContest = async (nextContest: string) => {
@@ -31,7 +33,20 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   const loadProblem = async (nextContest: string, task: string) => {
     setIsLoading(true);
     setStatus(`正在抓取 ${nextContest}/${task} 的题面...`);
+    setTranslated(null);
     vscode.postMessage({ command: "loadProblem", contest: nextContest, task });
+  };
+
+  const doTranslate = () => {
+    if (!problem) return;
+    setTranslating(true);
+    setStatus("正在翻译...");
+    const texts: Record<string, string> = {};
+    if (problem.statement) texts["题目描述"] = problem.statement;
+    if (problem.constraints) texts["约束"] = problem.constraints;
+    if (problem.inputFormat) texts["输入格式"] = problem.inputFormat;
+    if (problem.outputFormat) texts["输出格式"] = problem.outputFormat;
+    vscode.postMessage({ command: "translate", payload: texts, targetLang: "ZH" });
   };
 
   React.useEffect(() => {
@@ -60,11 +75,17 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
       if (message.type === "error") {
         setStatus(message.text ?? "操作失败");
         setIsLoading(false);
+        setTranslating(false);
       }
       if (message.type === "cf_challenge") {
         setCfUrl(message.url ?? null);
         setIsLoading(false);
         setStatus("AtCoder 需要 Cloudflare 验证，请在浏览器中完成验证后重试");
+      }
+      if (message.type === "translation") {
+        setTranslated(message.translated ?? null);
+        setTranslating(false);
+        setStatus("翻译完成");
       }
     };
 
@@ -135,15 +156,25 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
 
           {problem && (
             <Card className="p-3 space-y-3">
-              <div className="space-y-1">
-                <div className="text-[13px] font-semibold">{problem.title}</div>
-                <div className="text-[12px] opacity-60">{problem.url}</div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="text-[13px] font-semibold">{problem.title}</div>
+                  <div className="text-[12px] opacity-60">{problem.url}</div>
+                </div>
+                <Button onClick={doTranslate} disabled={translating} size="sm" className="h-[26px] text-[11px]">
+                  {translating ? "翻译中..." : "翻译"}
+                </Button>
               </div>
 
               {problem.statement && (
                 <div className="space-y-1">
                   <div className="text-[12px] font-semibold">题面</div>
                   <div className="text-[12px] whitespace-pre-wrap break-words">{problem.statement}</div>
+                  {translated?.["题目描述"] && (
+                    <div className="text-[12px] whitespace-pre-wrap break-words mt-1 pl-2 border-l-2 border-[var(--vscode-focusBorder)] opacity-90">
+                      {translated["题目描述"]}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -151,6 +182,11 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                 <div className="space-y-1">
                   <div className="text-[12px] font-semibold">约束</div>
                   <div className="text-[12px] whitespace-pre-wrap break-words">{problem.constraints}</div>
+                  {translated?.["约束"] && (
+                    <div className="text-[12px] whitespace-pre-wrap break-words mt-1 pl-2 border-l-2 border-[var(--vscode-focusBorder)] opacity-90">
+                      {translated["约束"]}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -158,6 +194,11 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                 <div className="space-y-1">
                   <div className="text-[12px] font-semibold">输入格式</div>
                   <div className="text-[12px] whitespace-pre-wrap break-words">{problem.inputFormat}</div>
+                  {translated?.["输入格式"] && (
+                    <div className="text-[12px] whitespace-pre-wrap break-words mt-1 pl-2 border-l-2 border-[var(--vscode-focusBorder)] opacity-90">
+                      {translated["输入格式"]}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -165,6 +206,11 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                 <div className="space-y-1">
                   <div className="text-[12px] font-semibold">输出格式</div>
                   <div className="text-[12px] whitespace-pre-wrap break-words">{problem.outputFormat}</div>
+                  {translated?.["输出格式"] && (
+                    <div className="text-[12px] whitespace-pre-wrap break-words mt-1 pl-2 border-l-2 border-[var(--vscode-focusBorder)] opacity-90">
+                      {translated["输出格式"]}
+                    </div>
+                  )}
                 </div>
               )}
 

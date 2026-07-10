@@ -1,11 +1,13 @@
 export interface WebviewMessage {
   type?: string;
-  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser';
+  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey';
   text?: string;
   contest?: string;
   task?: string;
   payload?: any;
   url?: string;
+  targetLang?: string;
+  translated?: Record<string, string>;
   tasks?: Array<{ label: string; value: string; url: string }>;
   problem?: any;
 }

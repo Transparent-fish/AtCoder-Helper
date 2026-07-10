@@ -18,6 +18,10 @@
       {
         "command": "extension.showWebview",
         "title": "Show WebView"
+      },
+      {
+        "command": "extension.setDeeplApiKey",
+        "title": "Set DeepL API Key"
       }
     ]
   },
