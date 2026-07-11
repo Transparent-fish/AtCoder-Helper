@@ -42,3 +42,12 @@ assert.ok(mathResult.statement.includes('class="katex"'), "should have KaTeX ren
 assert.ok(mathResult.constraints.includes("<ul>"), "should have <ul> tags preserved");
 assert.ok(mathResult.constraints.includes('class="katex"'), "should have math rendered");
 console.log("HTML/LaTeX rendering test passed");
+
+// Cookie tests
+import { setSessionCookie, getSessionCookie } from "./atcoder";
+assert.strictEqual(getSessionCookie(), "", "default cookie should be empty");
+setSessionCookie("REVEL_SESSION=test123");
+assert.strictEqual(getSessionCookie(), "REVEL_SESSION=test123", "cookie should be set");
+setSessionCookie("");
+assert.strictEqual(getSessionCookie(), "", "cookie should be cleared");
+console.log("Cookie test passed");

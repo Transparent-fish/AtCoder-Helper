@@ -23,6 +23,9 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   const [cfUrl, setCfUrl] = React.useState<string | null>(null);
   const [translated, setTranslated] = React.useState<Record<string, string> | null>(null);
   const [translating, setTranslating] = React.useState(false);
+  const [cookieInput, setCookieInput] = React.useState("");
+  const [hasCookie, setHasCookie] = React.useState(false);
+  const [showSettings, setShowSettings] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const loadContest = async (nextContest: string) => {
@@ -55,6 +58,10 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   }, []);
 
   React.useEffect(() => {
+    vscode.postMessage({ command: "getCookie" });
+  }, []);
+
+  React.useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data as WebviewMessage;
       if (message.type === "tasks") {
@@ -81,12 +88,25 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
       if (message.type === "cf_challenge") {
         setCfUrl(message.url ?? null);
         setIsLoading(false);
-        setStatus("AtCoder 需要 Cloudflare 验证，请在浏览器中完成验证后重试");
+        setShowSettings(true);
+        setStatus("AtCoder 触发 Cloudflare 验证，请在浏览器中完成验证，然后将 Cookie 粘贴到设置中");
+      }
+      if (message.type === "loginRequired") {
+        setIsLoading(false);
+        setShowSettings(true);
+        setStatus("需要登录 AtCoder 才能查看。请在浏览器中登录，然后将 Cookie 粘贴到设置中");
       }
       if (message.type === "translation") {
         setTranslated(message.translated ?? null);
         setTranslating(false);
         setStatus("翻译完成");
+      }
+      if (message.type === "cookieStatus") {
+        setHasCookie(message.hasCookie ?? false);
+        setCookieInput("");
+        if (message.statusMessage) {
+          setStatus(message.statusMessage);
+        }
       }
     };
 
@@ -112,9 +132,78 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
           <span className="text-[11px] opacity-60 select-none">extension</span>
           <span className="text-[13px] select-none">{title}</span>
         </div>
+        <div className="ml-auto flex items-center gap-1">
+          {hasCookie && <span className="w-2 h-2 rounded-full bg-green-500" title="已登录 AtCoder" />}
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="text-[11px] opacity-60 hover:opacity-100 px-1 py-0.5 rounded hover:bg-[var(--vscode-toolbar-hoverBackground)]"
+            title="设置"
+          >
+            ⚙
+          </button>
+        </div>
       </div>
       {/* 主内容 */}
       <div className="flex-1 flex flex-col bg-[var(--vscode-editor-background)] text-[var(--vscode-editor-foreground)]">
+        {showSettings && (
+          <div className="p-3 border-b border-[var(--vscode-panel-border)] space-y-2 bg-[var(--vscode-textBlockQuote-background)]">
+            <div className="text-[12px] font-semibold">AtCoder 登录 Cookie</div>
+            <div className="space-y-1 text-[11px] opacity-70 leading-relaxed">
+              <div>AtCoder 仅需 <code className="bg-[var(--vscode-textBlockQuote-background)] px-1 rounded">REVEL_SESSION</code> 一个 Cookie 即可登录。</div>
+              <div className="font-medium mt-1">获取步骤：</div>
+              <ol className="list-decimal pl-4 space-y-0.5">
+                <li>在浏览器中打开 <span className="underline cursor-pointer" onClick={() => vscode.postMessage({ command: "openBrowser", url: "https://atcoder.jp/login" })}>https://atcoder.jp/login</span> 并登录</li>
+                <li>按 <kbd className="px-1 rounded border border-[var(--vscode-input-border)]">F12</kbd> 打开开发者工具</li>
+                <li>切换到 <b>Application</b>（Chrome）或 <b>存储</b>（Edge）标签页</li>
+                <li>左侧找到 <b>Cookies</b> → <b>https://atcoder.jp</b></li>
+                <li>找到名为 <code className="bg-[var(--vscode-textBlockQuote-background)] px-1 rounded">REVEL_SESSION</code> 的行，双击 <b>Value</b> 列全选复制</li>
+                <li>粘贴到下方输入框（无需手动加前缀，插件会自动补全）</li>
+              </ol>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="password"
+                value={cookieInput}
+                onChange={(e) => setCookieInput(e.target.value)}
+                placeholder={hasCookie ? "已保存 Cookie，输入新值可覆盖" : "粘贴 REVEL_SESSION 的 Value"}
+                className="flex-1 h-[28px] text-[12px] px-2 rounded border border-[var(--vscode-input-border)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)]"
+              />
+              <Button
+                onClick={() => {
+                  const val = cookieInput.trim();
+                  if (!val) {
+                    setStatus("请先复制 REVEL_SESSION 的值再保存");
+                    return;
+                  }
+                  const finalVal = val.startsWith("REVEL_SESSION=") ? val : `REVEL_SESSION=${val}`;
+                  setCookieInput("");
+                  setHasCookie(true);
+                  setStatus("Cookie 已保存");
+                  vscode.postMessage({ command: "setCookie", text: finalVal });
+                }}
+                size="sm"
+                className="h-[28px] text-[11px]"
+                disabled={!cookieInput.trim()}
+              >
+                保存
+              </Button>
+              {hasCookie && (
+                  <Button
+                    onClick={() => {
+                      vscode.postMessage({ command: "setCookie", text: "" });
+                      setHasCookie(false);
+                      setStatus("Cookie 已清除");
+                    }}
+                    size="sm"
+                    variant="secondary"
+                    className="h-[28px] text-[11px]"
+                  >
+                    清除
+                  </Button>
+              )}
+            </div>
+          </div>
+        )}
         <div className="p-3 border-b border-[var(--vscode-panel-border)] space-y-2">
           <div className="flex items-center gap-2">
             <Input
@@ -234,14 +323,23 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
           )}
 
           {cfUrl && (
-            <div className="p-6 flex flex-col items-center justify-center h-full gap-4">
+            <div className="p-6 flex flex-col items-center justify-center gap-4">
               <div className="text-[14px] font-medium text-yellow-600">需要 Cloudflare 验证</div>
               <div className="text-[12px] opacity-70 text-center max-w-md">
-                AtCoder 触发了 Cloudflare 验证，请在浏览器中完成验证后重试。
+                <p className="mb-1">AtCoder 触发了 Cloudflare 验证，请按以下步骤操作：</p>
+                <ol className="text-left list-decimal pl-4 space-y-1">
+                  <li>点击下方按钮在浏览器中打开 AtCoder</li>
+                  <li>完成 Cloudflare 人机验证并登录</li>
+                  <li>按 <kbd className="px-1 rounded border border-[var(--vscode-input-border)]">F12</kbd> 复制 <b>REVEL_SESSION</b> 的 Cookie</li>
+                  <li>在插件设置 ⚙ 中粘贴 Cookie 后重试</li>
+                </ol>
               </div>
-              <div className="flex gap-3 mt-2">
+              <div className="flex gap-3 mt-2 flex-wrap justify-center">
                 <Button onClick={() => vscode.postMessage({ command: "openBrowser", url: cfUrl })} className="h-[32px] text-[12px]">
-                  在浏览器中打开
+                  在浏览器中打开并验证
+                </Button>
+                <Button onClick={() => { setShowSettings(true); }} className="h-[32px] text-[12px]">
+                  打开设置粘贴 Cookie
                 </Button>
                 <Button onClick={() => { setCfUrl(null); void loadContest(contest); }} className="h-[32px] text-[12px]">
                   验证完成，重试

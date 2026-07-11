@@ -38,7 +38,7 @@ vscode-boilerplate/
 │           ├── types.ts        # 消息类型定义
 │           ├── styles.css      # Tailwind + KaTeX CSS + HTML 内容样式
 │           └── index.tsx       # 入口
-├── end/                        # 打包输出目录 (extension.vsix)
+├── release/                    # 打包输出目录 (extension.vsix)
 └── DEEP.md                     # 本文件 — AI 提示词
 ```
 
@@ -124,4 +124,7 @@ npx tsx src/atcoder.test.ts
 - **CSP 限制**: WebView 仅允许 `vscode-resource:` 脚本和 `'unsafe-inline'` 样式，不支持 CDN 加载
 - **LaTeX 渲染**: 在扩展端 (Node.js) 用 KaTeX 预渲染 HTML，WebView 只负责展示
 - **翻译**: DeepL API Key 通过 `context.secrets` 安全存储，需用户手动设置
-- **打包**: 使用 `--no-dependencies` 跳过 pnpm 的严格依赖检查
+- **打包**: 使用 `--no-dependencies` 跳过 pnpm 的严格依赖检查，输出到 `release/extension.vsix`
+- **Cookie 登录**: AtCoder 仅需 `REVEL_SESSION` Cookie。通过 webview 设置面板或 `extension.setAtCoderCookie` 命令配置，存储于 `context.secrets`，跟随每个请求自动注入
+- **登录检测**: 302 重定向到 `/login` 或响应体含登录表单时，触发 `LoginRequiredError`，通知用户设置 Cookie
+- **CF 验证**: 响应 403 或检测到 Cloudflare 挑战字符串时，触发 `CfError`，弹窗提示用户在浏览器完成验证

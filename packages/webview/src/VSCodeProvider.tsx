@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useState } from "react";
 import type { VSCodeAPI, WebviewMessage } from "./types";
 
 interface VSCodeContextType {
@@ -19,7 +19,6 @@ export const useVSCode = () => {
 
 interface VSCodeProviderProps {
   children: React.ReactNode;
-  onMessage?: (message: WebviewMessage) => void;
 }
 
 // 创建一个 mock VSCode API 用于开发环境
@@ -54,24 +53,8 @@ const getVSCodeAPI = (): VSCodeAPI => {
 
 export const VSCodeProvider: React.FC<VSCodeProviderProps> = ({
   children,
-  onMessage,
 }) => {
   const [vscode] = useState<VSCodeAPI>(getVSCodeAPI);
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      onMessage?.(event.data);
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [onMessage]);
-
-  // const contextValue: VSCodeContextType = {
-  //   postMessage: vscode.postMessage.bind(vscode),
-  //   setState: vscode.setState.bind(vscode),
-  //   getState: vscode.getState.bind(vscode)
-  // };
 
   return (
     <VSCodeContext.Provider value={vscode}>{children}</VSCodeContext.Provider>

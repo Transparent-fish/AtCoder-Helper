@@ -1,6 +1,7 @@
 export interface WebviewMessage {
   type?: string;
-  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey';
+  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired';
+  statusMessage?: string;
   text?: string;
   contest?: string;
   task?: string;
@@ -10,6 +11,8 @@ export interface WebviewMessage {
   translated?: Record<string, string>;
   tasks?: Array<{ label: string; value: string; url: string }>;
   problem?: any;
+  hasCookie?: boolean;
+  masked?: string;
 }
 
 export interface VSCodeAPI {
