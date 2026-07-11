@@ -1,3 +1,86 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@import "katex/dist/katex.min.css";
+
+.math-fallback {
+  font-style: italic;
+}
+
+.html-content {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.html-content p {
+  margin-bottom: 0.5em;
+}
+.html-content ul,
+.html-content ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.5em;
+}
+.html-content ul li {
+  list-style-type: disc;
+}
+.html-content ol li {
+  list-style-type: decimal;
+}
+.html-content li {
+  margin-bottom: 0.25em;
+}
+.html-content code {
+  background: var(--vscode-textBlockQuote-background);
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.9em;
+}
+.html-content pre {
+  background: var(--vscode-textBlockQuote-background);
+  padding: 0.75em;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin-bottom: 0.5em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.html-content pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+.html-content strong,
+.html-content b {
+  font-weight: 600;
+}
+.html-content em,
+.html-content i {
+  font-style: italic;
+}
+.html-content a {
+  color: var(--vscode-textLink-foreground);
+  text-decoration: underline;
+}
+.html-content h1,
+.html-content h2,
+.html-content h3,
+.html-content h4 {
+  font-weight: 600;
+  margin-bottom: 0.3em;
+  margin-top: 0.6em;
+}
+.html-content br {
+  display: block;
+  content: "";
+  margin: 0.25em 0;
+}
+.html-content .katex {
+  font-size: 1.1em;
+}
+.html-content .katex-display {
+  margin: 0.5em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}

@@ -1,6 +1,7 @@
 import * as https from "https";
 import * as http from "http";
 import * as zlib from "zlib";
+import katex from "katex";
 
 export class CfError extends Error {
   url: string;
@@ -106,6 +107,16 @@ function fetchText(url: string): Promise<string> {
     });
 }
 
+function decodeEntities(text: string): string {
+    return text
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&nbsp;/g, " ");
+}
+
 function cleanText(value: string): string {
     return value
         .replace(/<br\s*\/?>/gi, "\n")
@@ -120,6 +131,78 @@ function cleanText(value: string): string {
         .trim();
 }
 
+const ALLOWED_TAGS = new Set([
+    "p", "br", "ul", "ol", "li", "strong", "em", "b", "i",
+    "code", "pre", "sub", "sup", "h1", "h2", "h3", "h4", "h5", "h6",
+    "hr", "blockquote", "span", "div", "table", "thead", "tbody", "tr", "th", "td",
+]);
+
+function cleanHtmlTags(html: string): string {
+    let result = html.replace(/<br\s*\/?>/gi, "\n");
+
+    result = result.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/gi, (match, tagName) => {
+        const lower = tagName.toLowerCase();
+        if (match.startsWith("</")) {
+            return ALLOWED_TAGS.has(lower) ? `</${lower}>` : "";
+        }
+        if (lower === "a") {
+            const hrefMatch = match.match(/href\s*=\s*"([^"]*)"/i);
+            const href = hrefMatch ? hrefMatch[1] : "";
+            return href ? `<a href="${href}">` : "<a>";
+        }
+        return ALLOWED_TAGS.has(lower) ? `<${lower}>` : "";
+    });
+
+    result = result.replace(/&nbsp;/gi, " ");
+    return result;
+}
+
+function renderMath(html: string): string {
+    const protectedMath: { content: string; isDisplay: boolean }[] = [];
+
+    let processed = html
+        .replace(/\\\[([\s\S]*?)\\\]/g, (_, expr) => {
+            protectedMath.push({ content: decodeEntities(expr), isDisplay: true });
+            return `@@MATH_${protectedMath.length - 1}@@`;
+        })
+        .replace(/\\\(([\s\S]*?)\\\)/g, (_, expr) => {
+            protectedMath.push({ content: decodeEntities(expr), isDisplay: false });
+            return `@@MATH_${protectedMath.length - 1}@@`;
+        })
+        .replace(/<var\b[^>]*>([\s\S]*?)<\/var>/gi, (_, content) => {
+            protectedMath.push({ content: decodeEntities(content), isDisplay: false });
+            return `@@MATH_${protectedMath.length - 1}@@`;
+        });
+
+    processed = cleanHtmlTags(processed)
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+
+    processed = processed.replace(/@@MATH_(\d+)@@/g, (_, idx) => {
+        const math = protectedMath[parseInt(idx)];
+        if (!math) return "";
+        try {
+            return katex.renderToString(math.content, {
+                displayMode: math.isDisplay,
+                throwOnError: false,
+                output: "html",
+            });
+        } catch {
+            const escaped = math.content
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+            return math.isDisplay
+                ? `<div class="math-fallback">\\[${escaped}\\]</div>`
+                : `<span class="math-fallback">\\(${escaped}\\)</span>`;
+        }
+    });
+
+    return processed;
+}
+
 function extractSection(html: string, headings: string[]): string {
     for (const h of headings) {
         const escaped = h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -128,7 +211,7 @@ function extractSection(html: string, headings: string[]): string {
             "i"
         );
         const match = html.match(regex);
-        if (match) return cleanText(match[1]);
+        if (match) return renderMath(match[1]);
     }
     return "";
 }

@@ -22,3 +22,23 @@ const result = parseProblemPage(sampleHtml, "https://atcoder.jp/contests/abc345/
 assert.strictEqual(result.title, "A - Sample");
 assert.deepStrictEqual(result.samples, [{ index: 1, input: "3\n1 2 3", output: "6" }]);
 console.log("atcoder parser test passed");
+
+const htmlWithMath = `
+<html>
+  <head><title>B - Math Test</title></head>
+  <body>
+    <span class="lang-en">
+      <h3>Problem Statement</h3>
+      <p>Given \\(N\\) and \\(K\\), calculate <var>N</var> + <var>K</var>.</p>
+      <h3>Constraints</h3>
+      <ul><li><var>1 \\leq N \\leq 10^5</var></li></ul>
+    </span>
+  </body>
+</html>`;
+
+const mathResult = parseProblemPage(htmlWithMath, "https://atcoder.jp/contests/abc345/tasks/abc345_b");
+assert.ok(mathResult.statement.includes("<p>"), "should have <p> tags preserved");
+assert.ok(mathResult.statement.includes('class="katex"'), "should have KaTeX rendered math");
+assert.ok(mathResult.constraints.includes("<ul>"), "should have <ul> tags preserved");
+assert.ok(mathResult.constraints.includes('class="katex"'), "should have math rendered");
+console.log("HTML/LaTeX rendering test passed");

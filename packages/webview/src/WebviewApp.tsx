@@ -4,6 +4,7 @@ import "./styles.css";
 
 import { useVSCode } from "./VSCodeProvider";
 import type { WebviewMessage } from "./types";
+import { HtmlContent, TranslatedBlock } from "./components/HtmlContent";
 
 export interface WebviewAppProps {
   title?: string;
@@ -169,11 +170,9 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               {problem.statement && (
                 <div className="space-y-1">
                   <div className="text-[12px] font-semibold">题面</div>
-                  <div className="text-[12px] whitespace-pre-wrap break-words">{problem.statement}</div>
+                  <HtmlContent html={problem.statement} />
                   {translated?.["题目描述"] && (
-                    <div className="text-[12px] whitespace-pre-wrap break-words mt-1 pl-2 border-l-2 border-[var(--vscode-focusBorder)] opacity-90">
-                      {translated["题目描述"]}
-                    </div>
+                    <TranslatedBlock original={problem.statement} translation={translated["题目描述"]} />
                   )}
                 </div>
               )}
@@ -181,11 +180,9 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               {problem.constraints && (
                 <div className="space-y-1">
                   <div className="text-[12px] font-semibold">约束</div>
-                  <div className="text-[12px] whitespace-pre-wrap break-words">{problem.constraints}</div>
+                  <HtmlContent html={problem.constraints} />
                   {translated?.["约束"] && (
-                    <div className="text-[12px] whitespace-pre-wrap break-words mt-1 pl-2 border-l-2 border-[var(--vscode-focusBorder)] opacity-90">
-                      {translated["约束"]}
-                    </div>
+                    <TranslatedBlock original={problem.constraints} translation={translated["约束"]} />
                   )}
                 </div>
               )}
@@ -193,11 +190,9 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               {problem.inputFormat && (
                 <div className="space-y-1">
                   <div className="text-[12px] font-semibold">输入格式</div>
-                  <div className="text-[12px] whitespace-pre-wrap break-words">{problem.inputFormat}</div>
+                  <HtmlContent html={problem.inputFormat} />
                   {translated?.["输入格式"] && (
-                    <div className="text-[12px] whitespace-pre-wrap break-words mt-1 pl-2 border-l-2 border-[var(--vscode-focusBorder)] opacity-90">
-                      {translated["输入格式"]}
-                    </div>
+                    <TranslatedBlock original={problem.inputFormat} translation={translated["输入格式"]} />
                   )}
                 </div>
               )}
@@ -205,11 +200,9 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               {problem.outputFormat && (
                 <div className="space-y-1">
                   <div className="text-[12px] font-semibold">输出格式</div>
-                  <div className="text-[12px] whitespace-pre-wrap break-words">{problem.outputFormat}</div>
+                  <HtmlContent html={problem.outputFormat} />
                   {translated?.["输出格式"] && (
-                    <div className="text-[12px] whitespace-pre-wrap break-words mt-1 pl-2 border-l-2 border-[var(--vscode-focusBorder)] opacity-90">
-                      {translated["输出格式"]}
-                    </div>
+                    <TranslatedBlock original={problem.outputFormat} translation={translated["输出格式"]} />
                   )}
                 </div>
               )}

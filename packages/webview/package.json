@@ -12,6 +12,7 @@
   "dependencies": {
     "@template/core": "workspace:*",
     "@template/ui": "workspace:*",
+    "katex": "^0.17.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

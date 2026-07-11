@@ -92,6 +92,10 @@ const webviewConfig = {
           },
         ],
       },
+      {
+        test: /\.(woff2?|eot|ttf|otf)$/,
+        type: "asset/inline",
+      },
     ],
   },
   devtool: "source-map",
