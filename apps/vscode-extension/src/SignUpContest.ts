@@ -38,18 +38,13 @@ export async function signedUpContest(contest: string, csrfToken: string, rated?
     try {
         const html = await fetchTextPost(url, body);
 
-        const formRegex = new RegExp(
-            `<form[^>]*action="[^"]*${contest}\/register"[^>]*>([\\s\\S]*?)<\\/form>`,
-            "i"
-        );
-        const form = html.match(formRegex)?.[1];
-        const isSigned = form ? /<button[^>]*>Unregister<\/button>/i.test(form) : false;
+        const isSigned = /Unregister|registered/i.test(html);
 
         if (isSigned) {
             return { success: true, message: "报名成功！" };
         }
 
-        const errMatch = html.match(/<div[^>]*class="[^"]*alert[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+        const errMatch = html.match(/<div[^>]*class="[^"]*(?:alert-danger|alert-warning|alert-error)[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
         const errMsg = errMatch ? errMatch[1].replace(/<[^>]+>/g, "").trim() : "报名失败，请检查 Cookie 是否有效";
         return { success: false, message: errMsg };
     } catch (error) {

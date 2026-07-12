@@ -201,14 +201,15 @@ function handleResponse(
   console.log(`${logPrefix} 收到响应:`, url, `status=${res.statusCode}`);
 
   if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-    console.log(`${logPrefix} 重定向:`, res.statusCode, `->`, res.headers.location);
+    const redirectUrl = new URL(res.headers.location, url).href;
+    console.log(`${logPrefix} 重定向:`, res.statusCode, `->`, redirectUrl);
     restoreProxyEnv(restoreSaved);
-    if (res.headers.location.includes("/login")) {
+    if (redirectUrl.includes("/login")) {
       console.log(`${logPrefix} 检测到登录重定向`);
-      reject(new LoginRequiredError(url));
+      reject(new LoginRequiredError(redirectUrl));
       return;
     }
-    resolve(redirectFetcher(res.headers.location));
+    resolve(redirectFetcher(redirectUrl));
     return;
   }
 

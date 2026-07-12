@@ -41,7 +41,8 @@ jobs:
 
       - id: test
         continue-on-error: true
-        run: pnpm test 2>&1 | tee test_output.txt
+        run: pnpm test:unit 2>&1 | tee test_output.txt
+        working-directory: apps/vscode-extension
 
       - id: linelength
         continue-on-error: true
