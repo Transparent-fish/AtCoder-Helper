@@ -226,7 +226,7 @@ function createShowWebview(context: vscode.ExtensionContext) {
   return () => {
     const panel = vscode.window.createWebviewPanel(
       "templateWebview",
-      "AtCoder 题目浏览器",
+      "AtCoder",
       vscode.ViewColumn.One,
       {
         enableScripts: true,

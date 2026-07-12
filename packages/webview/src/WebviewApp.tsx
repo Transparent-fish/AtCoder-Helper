@@ -243,17 +243,6 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
             <Button onClick={() => void loadContest(contest)} disabled={isLoading} className="h-[28px] text-[12px]">
               加载题目
             </Button>
-            {Rated && (
-              <label className="flex items-center gap-1 text-[12px] select-none cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isRated}
-                  onChange={(e) => setIsRated(e.target.checked)}
-                  className="w-3 h-3"
-                />
-                评级报名
-              </label>
-            )}
             <Button
               onClick={handleRegister}
               disabled={isLoading || !hasCookie}
@@ -265,6 +254,17 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               {signed ? "已报名" : "报名比赛"}
             </Button>
           </div>
+          {Rated && (
+            <label className="flex items-center gap-1 text-[12px] select-none cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isRated}
+                onChange={(e) => setIsRated(e.target.checked)}
+                className="w-3 h-3"
+              />
+              评级报名
+            </label>
+          )}
           {registrationMessage && (
             <div className={`text-[12px] ${signed ? "text-green-500" : "text-red-500"}`}>
               {registrationMessage}

@@ -17,7 +17,7 @@
     "commands": [
       {
         "command": "extension.showWebview",
-        "title": "Show WebView"
+        "title": "AtCoder"
       },
       {
         "command": "extension.setDeeplApiKey",
