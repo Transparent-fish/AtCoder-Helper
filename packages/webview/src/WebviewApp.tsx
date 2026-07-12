@@ -122,6 +122,10 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
         if (message.statusMessage) {
           setStatus(message.statusMessage);
         }
+        if (message.hasCookie) {
+          setCfUrl(null);
+          setShowSettings(false);
+        }
       }
       if (message.type === "registrationStatus") {
         setSigned(message.signed ?? false);
