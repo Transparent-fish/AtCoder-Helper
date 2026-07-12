@@ -12,123 +12,98 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v3
         with:
           version: 8.10.0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
-      - name: Run lint
-        id: lint
+      - id: lint
         continue-on-error: true
-        run: |
-          pnpm lint 2>&1 | tee lint_output.txt
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
+        run: pnpm lint 2>&1 | tee lint_output.txt
 
-      - name: Run build
-        id: build
+      - id: build
         continue-on-error: true
-        run: |
-          pnpm build 2>&1 | tee build_output.txt
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
+        run: pnpm build 2>&1 | tee build_output.txt
 
-      - name: Run tests
-        id: test
+      - id: test
         continue-on-error: true
-        run: |
-          pnpm test 2>&1 | tee test_output.txt
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
+        run: pnpm test 2>&1 | tee test_output.txt
 
-      - name: Check function line lengths
-        id: linelength
+      - id: linelength
         continue-on-error: true
+        shell: bash
         run: |
-          errors=0
-          find apps packages -name "*.ts" -o -name "*.tsx" | while read file; do
+          overages=""
+          while IFS= read -r file; do
             if [ -f "$file" ]; then
-              node -e "
-                const fs = require('fs');
-                const lines = fs.readFileSync('$file', 'utf-8').split('\n');
-                let inside = false, startLine = 0, name = '';
-                for (let i = 0; i < lines.length; i++) {
-                  const m = lines[i].match(/^\s*(export\s+)?(async\s+)?function\s+(\w+)/);
-                  if (m) {
-                    if (inside) {
-                      const count = i - startLine;
-                      if (count > 130) console.log(\`OVER 130: \${name} in \$file (\${count} lines, line \${startLine+1})\`);
+              results=$(node -e "
+                var fs=require('fs');
+                var lines=fs.readFileSync('$file','utf-8').split('\n');
+                var start=-1,name='';
+                for(var i=0;i<lines.length;i++){
+                  var m=lines[i].match(/^\s*(export\s+)?(async\s+)?function\s+(\w+)/);
+                  if(m){
+                    if(start>=0){
+                      var cnt=i-start;
+                      if(cnt>130)console.log(name+' in $file ('+cnt+' lines, line '+(start+1)+')');
                     }
-                    inside = true; startLine = i; name = m[3];
+                    start=i;name=m[3];
                   }
                 }
-              "
+              ")
+              if [ -n "$results" ]; then overages="$overages"$'\n'"$results"; fi
             fi
-          done 2>&1 | tee linelength_output.txt || true
-          if grep -q "OVER 130" linelength_output.txt; then
-            echo "exit_code=1" >> $GITHUB_OUTPUT
-          else
-            echo "exit_code=0" >> $GITHUB_OUTPUT
-          fi
+          done < <(find apps packages -name "*.ts" -o -name "*.tsx")
+          echo "$overages" | tee linelength_output.txt
+          if [ -z "$overages" ]; then echo "passed=true" >> $GITHUB_OUTPUT; else echo "passed=false" >> $GITHUB_OUTPUT; fi
 
-      - name: Post review comment
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const buildPassed = '${{ steps.build.outputs.exit_code }}' === '0';
-            const lintPassed = '${{ steps.lint.outputs.exit_code }}' === '0';
-            const testPassed = '${{ steps.test.outputs.exit_code }}' === '0';
-            const linelengthPassed = '${{ steps.linelength.outputs.exit_code }}' === '0';
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD: ${{ steps.build.outcome }}
+          LINT: ${{ steps.lint.outcome }}
+          TEST: ${{ steps.test.outcome }}
+          LL: ${{ steps.linelength.outputs.passed }}
+        shell: bash
+        run: |
+          echo "## PR 审查报告" > comment.md
+          echo "" >> comment.md
+          echo "### 检查结果" >> comment.md
+          echo "" >> comment.md
+          echo "| 检查项 | 状态 |" >> comment.md
+          echo "|--------|------|" >> comment.md
 
-            const failedChecks = [];
-            if (!buildPassed) failedChecks.push('- [ ] `pnpm build` ❌');
-            if (!lintPassed) failedChecks.push('- [ ] `pnpm lint` ❌');
-            if (!testPassed) failedChecks.push('- [ ] `pnpm test` ❌');
-            if (!linelengthPassed) failedChecks.push('- [ ] 函数长度不超过 130 行 ❌');
+          if [ "$BUILD" = "success" ]; then echo "| \`pnpm build\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm build\` | :x: |" >> comment.md; fi
+          if [ "$LINT" = "success" ]; then echo "| \`pnpm lint\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm lint\` | :x: |" >> comment.md; fi
+          if [ "$TEST" = "success" ]; then echo "| \`pnpm test\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm test\` | :x: |" >> comment.md; fi
+          if [ "$LL" = "true" ]; then echo "| 函数 <= 130 行 | :white_check_mark: |" >> comment.md; else echo "| 函数 <= 130 行 | :x: |" >> comment.md; fi
 
-            const status = failedChecks.length === 0 ? '✅ 全部通过' : '❌ 部分检查未通过';
+          echo "" >> comment.md
+          echo "### 未通过的检查" >> comment.md
+          echo "" >> comment.md
 
-            const body = `## PR 审查报告
+          any_fail=false
+          if [ "$BUILD" != "success" ]; then echo "- [ ] \`pnpm build\`" >> comment.md; any_fail=true; fi
+          if [ "$LINT" != "success" ]; then echo "- [ ] \`pnpm lint\`" >> comment.md; any_fail=true; fi
+          if [ "$TEST" != "success" ]; then echo "- [ ] \`pnpm test\`" >> comment.md; any_fail=true; fi
+          if [ "$LL" != "true" ]; then echo "- [ ] 函数长度不超过 130 行" >> comment.md; any_fail=true; fi
 
-### 检查结果
+          if [ "$any_fail" = false ]; then echo "全部通过，无需修改。" >> comment.md; fi
 
-| 检查项 | 状态 |
-|--------|------|
-| \`pnpm build\` | ${buildPassed ? '✅' : '❌'} |
-| \`pnpm lint\` | ${lintPassed ? '✅' : '❌'} |
-| \`pnpm test\` | ${testPassed ? '✅' : '❌'} |
-| 函数 ≤ 130 行 | ${linelengthPassed ? '✅' : '❌'} |
+          echo "" >> comment.md
+          echo "---" >> comment.md
+          echo "" >> comment.md
+          echo "*自动生成 by PR Review workflow*" >> comment.md
 
-### 未通过的检查
+          gh pr comment ${{ github.event.pull_request.number }} --body "$(cat comment.md)"
 
-${failedChecks.length > 0 ? failedChecks.join('\n') : '全部通过，无需修改。'}
-
-### 规范文档
-
-请参考 [docs/Standard.md](${{ github.server_url }}/${{ github.repository }}/blob/main/docs/Standard.md) 查看完整规范。
-
----
-
-*自动生成 by PR Review workflow*
-`;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
-
-            if (failedChecks.length > 0) {
-              core.setFailed('部分检查未通过');
-            }
+          if [ "$any_fail" = true ]; then exit 1; fi
