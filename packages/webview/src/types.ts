@@ -1,6 +1,6 @@
 export interface WebviewMessage {
   type?: string;
-  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired';
+  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest';
   statusMessage?: string;
   text?: string;
   contest?: string;
@@ -13,6 +13,10 @@ export interface WebviewMessage {
   problem?: any;
   hasCookie?: boolean;
   masked?: string;
+  signed?: boolean;
+  registrationMessage?: string;
+  rated?: boolean;
+  Rated?: boolean;
 }
 
 export interface VSCodeAPI {

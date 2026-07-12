@@ -18,7 +18,7 @@
             "presentation": { "reveal": "silent", "panel": "dedicated" },
             "group": { "kind": "build", "isDefault": true },
             "options": {
-                "cwd": "${workspaceFolder}/packages/vscode-extension"
+                "cwd": "${workspaceFolder}/apps/vscode-extension"
             }
         },
         {
@@ -38,7 +38,7 @@
             "presentation": { "reveal": "silent", "panel": "dedicated" },
             "group": "build",
             "options": {
-                "cwd": "${workspaceFolder}/packages/vscode-extension"
+                "cwd": "${workspaceFolder}/apps/vscode-extension"
             }
         }
     ]
