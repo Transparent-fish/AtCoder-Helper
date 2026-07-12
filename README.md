@@ -1,259 +1,151 @@
 <p align="center">
-  <img src="docs/images/cover.png" alt="VS Code Boilerplate Cover" width="100%">
+  <img src="docs/images/cover.png" alt="Cover" width="100%">
 </p>
 
 <h1 align="center">
   <img src="assets/logo.svg" width="32" height="32" alt="Logo" align="top">
-  VS Code Boilerplate
+  AtCoder Helper
 </h1>
 
 <p align="center">
-  <strong>现代化 VS Code 插件开发模板</strong><br>
-  <sub>Turborepo · TypeScript · React WebView · Tailwind CSS</sub>
+  <strong>VS Code 插件 — AtCoder 题目浏览 & 报名</strong><br>
+  <sub>Turborepo · TypeScript · React WebView · Tailwind CSS · KaTeX</sub>
 </p>
 
 <!-- toc -->
 
-[核心优势](#核心优势) • [特性](#特性) • [项目结构](#项目结构) • [快速开始](#快速开始) • [开发指南](#开发指南) • [常见问题](#常见问题) • [许可证](#许可证)
+[特性](#特性) • [项目结构](#项目结构) • [快速开始](#快速开始) • [开发指南](#开发指南) • [常见问题](#常见问题) • [许可证](#许可证)
 
 <!-- tocstop -->
 
-
-一个现代化的 VS Code 插件开发模板，基于 [YAAC](https://github.com/cs-magic/YAAC) 项目的技术栈，集成了：
-
-- 🏃 Turborepo - 高性能的构建系统
-- 📝 TypeScript - 类型安全的开发体验
-- 🖼️ WebView - VS Code 自定义界面
-- ⚛️ React - 组件化开发
-- 🎨 Tailwind CSS - 现代化 UI 设计
-- 🛠️ VS Code API - 深度扩展集成
-- 📦 Webpack - 优化的打包工具
-
-## 核心优势
-
-- 🔍 优化的调试体验
-
-  - 预配置的 F5 调试设置
-  - 智能的断点和变量监控
-  - 集成的开发者工具支持
-
-- 📦 完善的依赖管理
-
-  - 基于 pnpm 的高效依赖管理
-  - 智能的构建缓存策略
-  - 自动化的依赖更新
-
-- 🎨 增强的 WebView 体验
-  - 响应式设计支持
-  - 主题自适应
-  - 优化的状态管理
+VS Code 插件，支持浏览 AtCoder 竞赛题目、LaTeX 数学公式渲染、DeepL 翻译、评级/非评级报名。
 
 ## 特性
 
-- ⚡️ 快速开发启动
-- 📦 Monorepo 工作区管理
-- 🔄 开发环境热重载
-- 🎯 TypeScript 严格模式
-- 🎨 现代化 UI 框架
-- 🛠️ 完整的工具链集成
+- 📋 **题目浏览** — 输入比赛代号，一键加载所有题目列表
+- 📐 **LaTeX 渲染** — 服务端 KaTeX 预渲染，WebView 直接展示
+- 🌐 **DeepL 翻译** — 选中题面段落，自动翻译为中文
+- 📝 **报名比赛** — 支持评级（Rated）/ 非评级报名
+- 🔑 **Cookie 登录** — 安全存储 REVEL_SESSION，自动注入请求
+- 🎨 **主题适配** — WebView 自动跟随 VS Code 主题
 
 ## 项目结构
 
 ```
 .
 ├── apps/
-│   └── vscode-extension/     # VS Code 插件主程序
-│       ├── src/             # 插件源码
-│       └── webpack.config.js # Webpack 构建配置
+│   └── vscode-extension/       # VS Code 插件主程序
+│       ├── src/
+│       │   ├── extension.ts          # 插件入口，消息路由
+│       │   ├── atcoder.ts            # AtCoder 爬虫 & 题面解析
+│       │   ├── SelectContest.ts      # 报名逻辑（fetchContest / signedUpContest）
+│       │   ├── atcoder.test.ts       # 单元测试
+│       │   └── tools/
+│       │       ├── fetch.ts          # HTTP 请求工具 & 网络错误类
+│       │       └── deepl.ts          # DeepL 翻译 API
+│       ├── webpack.config.js         # Webpack 构建配置
+│       └── package.json              # 扩展清单
 │
 ├── packages/
-│   ├── core/               # 核心业务逻辑
-│   │   └── src/           # 共享的核心功能
-│   │
-│   ├── ui/                # UI 组件库
-│   │   ├── src/          # React 组件
-│   │   └── tailwind.config.js # Tailwind 配置
-│   │
-│   └── webview/           # WebView 前端应用
-│       └── src/          # WebView 源码
+│   ├── core/                   # @template/core — 核心工具
+│   ├── ui/                     # @template/ui — React 组件库
+│   └── webview/                # @template/webview — WebView 应用
 │
-├── pnpm-workspace.yaml    # 工作区配置
-└── turbo.json            # Turborepo 配置
+├── docs/
+│   ├── images/
+│   └── Standard.md             # 编码规范文档
+│
+├── .github/workflows/
+│   └── pr-review.yml           # PR 自动审查流程
+│
+├── pnpm-workspace.yaml         # 工作区配置
+└── turbo.json                  # Turborepo 配置
 ```
 
 ### 目录说明
 
-- `apps/vscode-extension`: VS Code 插件主程序
-
-  - 负责插件生命周期管理
-  - 处理 VS Code 命令和事件
-  - 集成 WebView 和核心功能
-
-- `packages/core`: 核心业务逻辑
-
-  - 提供共享的业务功能
-  - 实现数据处理和状态管理
-  - 定义核心 API 和接口
-
-- `packages/ui`: UI 组件库
-
-  - 基于 React 的可复用组件
-  - 集成 Tailwind CSS 样式系统
-  - 支持主题定制和响应式设计
-
-- `packages/webview`: WebView 前端应用
-  - 独立的 React 应用
-  - 负责展示和用户交互
-  - 与插件主程序通信
+| 目录 | 职责 |
+|------|------|
+| `apps/vscode-extension` | 插件入口，消息处理，AtCoder 爬虫，HTTP 工具，报名逻辑 |
+| `packages/core` | 核心业务逻辑（MessageBus, StateManager） |
+| `packages/ui` | React 组件库（Button, Card, Input, Spinner） |
+| `packages/webview` | WebView 前端应用（React + Tailwind + KaTeX） |
+| `docs/Standard.md` | 编码规范（命名、行数限制、导入顺序等） |
 
 ## 快速开始
 
-1. 克隆项目:
+### 安装
 
-   ```bash
-   git clone [your-template-url]
-   cd vscode-boilerplate
-   ```
+```bash
+pnpm install
+```
 
-2. 安装依赖:
+### 开发
 
-   ```bash
-   # 安装 pnpm（如果未安装）
-   npm install -g pnpm@8.10.0
+```bash
+# 启动监听模式（自动编译）
+pnpm dev
+```
 
-   # 安装项目依赖
-   pnpm install
-   ```
+### 调试
 
-3. 开发模式:
+1. VS Code 中按 `F5`（已预配置 launch.json）
+2. 新窗口中 `Ctrl+Shift+P` → `Show WebView`
+3. 输入比赛代号（如 `abc345`）→ 加载题目 → 浏览/翻译/报名
 
-   ```bash
-   # 启动所有相关包的开发模式
-   pnpm dev
-   ```
+### 设置 Cookie（用于报名 & 登录后题目）
 
-4. VS Code 插件调试:
-   - 在 VS Code 中打开项目根目录
-   - 按 F5 启动调试（已预配置调试设置）
-   - 在新窗口中使用 `Cmd/Ctrl + Shift + P` 运行 "Show WebView" 命令
+1. 浏览器登录 https://atcoder.jp
+2. F12 → Application → Cookies → 复制 `REVEL_SESSION` 的 Value
+3. VS Code 中 `Ctrl+Shift+P` → `Set AtCoder Login Cookie`
+
+### 设置 DeepL API Key（用于翻译）
+
+`Ctrl+Shift+P` → `Set DeepL API Key`
 
 ## 开发指南
 
-### 项目开发
+### 脚本
 
-1. **开发工作流**
+```bash
+pnpm build          # 编译所有包
+pnpm dev            # 开发监听模式
+pnpm lint           # ESLint 检查
+pnpm format         # Prettier 格式化
+pnpm test:unit      # 运行单元测试（apps/vscode-extension）
+pnpm clean          # 清理构建产物
+```
 
-   ```bash
-   # 启动开发模式（监听所有相关包的变更）
-   pnpm dev
+### 编码规范
 
-   # 构建所有包
-   pnpm build
+详见 [docs/Standard.md](docs/Standard.md)，包括：
 
-   # 运行代码检查
-   pnpm lint
+- 文件名：组件 PascalCase，工具 camelCase
+- TypeScript：优先 `interface`，避免 `any`
+- 函数不超过 **120 行**（可适当放宽至 130）
+- 导入顺序：外部 → 内部包 → 相对路径
 
-   # 格式化代码
-   pnpm format
-   ```
+## 发布
 
-2. **清理项目**
-   ```bash
-   # 清理所有构建缓存和依赖
-   pnpm clean
-   ```
-
-### 包开发指南
-
-1. **Core 包开发**
-
-   - 位置：`packages/core`
-   - 职责：实现核心业务逻辑
-   - 开发建议：
-     - 保持良好的类型定义
-     - 编写单元测试
-     - 遵循模块化原则
-
-2. **UI 包开发**
-
-   - 位置：`packages/ui`
-   - 职责：提供可复用的 UI 组件
-   - 开发建议：
-     - 使用 Storybook 开发和测试组件
-     - 遵循 Tailwind 设计规范
-     - 确保组件的可访问性
-
-3. **WebView 开发**
-
-   - 位置：`packages/webview`
-   - 职责：实现 VS Code WebView 界面
-   - 开发建议：
-     - 使用 React DevTools 调试
-     - 注意状态管理和性能优化
-     - 遵循 VS Code 的设计规范
-
-4. **插件开发**
-   - 位置：`apps/vscode-extension`
-   - 职责：实现 VS Code 插件功能
-   - 开发建议：
-     - 使用 VS Code 调试工具
-     - 查看开发者工具的控制台输出
-     - 测试不同的 VS Code 主题兼容性
-
-### 调试技巧
-
-1. **WebView 调试**
-
-   - 在 VS Code 中打开开发者工具（帮助 > 切换开发人员工具）
-   - 使用 React DevTools 检查组件
-   - 查看控制台输出和网络请求
-
-2. **插件调试**
-
-   - 使用断点和日志调试
-   - 查看 VS Code 输出面板
-   - 使用 VS Code 的调试控制台
-
-3. **性能优化**
-   - 使用 React Profiler 分析性能
-   - 检查 Webpack 构建配置
-   - 优化状态更新和渲染
-
-### 发布准备
-
-1. **版本发布**
-
-   ```bash
-   # 构建生产版本
-   pnpm build
-
-   # 运行测试
-   pnpm test
-
-   # 打包插件（在 apps/vscode-extension 目录下）
-   cd apps/vscode-extension
-   vsce package
-   ```
-
-2. **发布检查清单**
-   - 确保所有测试通过
-   - 检查构建产物
-   - 在不同版本的 VS Code 中测试
-   - 更新版本号和更新日志
-   - 检查发布配置
+```bash
+cd apps/vscode-extension
+pnpm package
+# 输出: release/extension.vsix
+```
 
 ## 常见问题
 
-1. WebView 不显示？
+**WebView 不显示？**
+- 确保已运行 `pnpm build`
+- 检查 `dist/webview.js` 是否存在
 
-   - 确保已运行 `pnpm build` 构建 WebView
-   - 检查 WebView 的构建输出
-   - 查看 VS Code 的开发者工具
+**报名失败？**
+- 确认已设置 AtCoder Cookie
+- Cookie 可能过期，重新登录获取
 
-2. 热重载不工作？
-   - 确保开发服务器正在运行
-   - 检查控制台错误
-   - 重新加载 VS Code 窗口
+**LaTeX 不渲染？**
+- KaTeX 在扩展端预渲染，WebView 只需 CSS
+- 检查控制台是否有字体加载错误
 
 ## 许可证
 
