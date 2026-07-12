@@ -233,9 +233,14 @@ function handleResponse(
 
     restoreProxyEnv(restoreSaved);
 
-    if (res.statusCode === 403 || isCfChallenge(body)) {
+    if (isCfChallenge(body)) {
       console.log(`${logPrefix} 检测到 Cloudflare 挑战`);
       reject(new CfError(url));
+      return;
+    }
+    if (res.statusCode === 403) {
+      console.log(`${logPrefix} 403 但非 CF，可能 Cookie 无效`);
+      reject(new Error(`访问被拒绝 (403)。Cookie 可能无效或已过期，请重新登录 AtCoder 获取新的 REVEL_SESSION`));
       return;
     }
     if (isLoginPage(body)) {

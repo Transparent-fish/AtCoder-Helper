@@ -206,12 +206,19 @@ export async function fetchAtCoderTasks(contest: string): Promise<Array<{ label:
         `<a\\s+href="\\/contests\\/${contestPattern}\\/tasks\\/([^"#]+)"[^>]*>([^<]+)<\\/a>`,
         "gi"
     );
-    const tasks = Array.from(html.matchAll(taskRegex));
-    return tasks
-        .filter(([, task]) => task && task !== "tasks_print")
-        .map(([, task, label]) => ({
-            label: cleanText(label),
-            value: task,
-            url: `https://atcoder.jp/contests/${contest}/tasks/${task}`,
-        }));
+    const best = new Map<string, string>();
+    Array.from(html.matchAll(taskRegex))
+        .filter(([, task]) => task && task !== "tasks_print" && !task.includes("/"))
+        .forEach(([, task, label]) => {
+            const cleaned = cleanText(label);
+            const prev = best.get(task);
+            if (!prev || cleaned.length > prev.length) {
+                best.set(task, cleaned);
+            }
+        });
+    return Array.from(best.entries()).map(([task, label]) => {
+        const suffix = (task.split("_").pop() || "").toUpperCase();
+        const title = label.replace(/^[A-Za-z0-9]+\s*[-–—.]\s*/, "").trim();
+        return { label: `${suffix} - ${title}`, value: task, url: `https://atcoder.jp/contests/${contest}/tasks/${task}` };
+    });
 }
