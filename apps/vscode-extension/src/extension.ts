@@ -4,6 +4,7 @@ import { fetchAtCoderProblem, fetchAtCoderTasks } from "./atcoder";
 import { CfError, ProxyError, LoginRequiredError, setSessionCookie } from "./tools/fetch";
 import { fetchContest, signedUpContest } from "./SignUpContest";
 import { translateTextRaw } from "./tools/deepl";
+import { copyMarkdown } from "./tools/copy";
 
 const log = {
   info: (...args: any[]) => {
@@ -33,11 +34,8 @@ function getWebviewContent(webviewJsSrc: vscode.Uri): string {
 
 function handleErrorWithCfAndLogin(error: unknown, send: (payload: any) => void): boolean {
   if (error instanceof CfError) {
-    const open = "在浏览器中打开并验证";
-    const setCookie = "验证后设置 Cookie";
-    vscode.window.showErrorMessage(error.message, open, setCookie).then((choice) => {
-      if (choice === open) vscode.env.openExternal(vscode.Uri.parse(error.url));
-      if (choice === setCookie) vscode.commands.executeCommand("extension.setAtCoderCookie");
+    vscode.window.showErrorMessage(error.message, "在浏览器中打开").then((choice) => {
+      if (choice === "在浏览器中打开") vscode.env.openExternal(vscode.Uri.parse(error.url));
     });
     send({ type: "cf_challenge", url: error.url });
     return true;
@@ -278,6 +276,12 @@ function createShowWebview(context: vscode.ExtensionContext) {
           case "registerContest":
             await handleRegistration(message.contest, message.rated, sendToWebview);
             return;
+          case "copyMarkdown":
+            if (message.problem) {
+              await vscode.env.clipboard.writeText(copyMarkdown(message.problem));
+              sendToWebview({ type: "update", text: "已复制到剪贴板" });
+            }
+            return;
           case "alert":
             vscode.window.showInformationMessage(message.text);
             sendToWebview({ type: "update", text: `Extension received: ${message.text}` });
@@ -290,16 +294,15 @@ function createShowWebview(context: vscode.ExtensionContext) {
   };
 }
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   log.info("Extension is now active!");
 
   try {
-    context.secrets.get("atcoderCookie").then((cookie) => {
-      if (cookie) {
-        setSessionCookie(cookie);
-        log.info("已加载 AtCoder 登录 Cookie");
-      }
-    });
+    const cookie = await context.secrets.get("atcoderCookie");
+    if (cookie) {
+      setSessionCookie(cookie);
+      log.info("已加载 AtCoder 登录 Cookie");
+    }
 
     context.subscriptions.push(registerSetDeeplApiKey(context));
     context.subscriptions.push(registerSetAtCoderCookie(context));

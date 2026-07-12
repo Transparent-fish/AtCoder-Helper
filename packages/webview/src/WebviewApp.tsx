@@ -51,6 +51,12 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
     vscode.postMessage({ command: "registerContest", contest, rated: isRated });
   };
 
+  const doCopyMarkdown = () => {
+    if (!problem) return;
+    vscode.postMessage({ command: "copyMarkdown", problem });
+    setStatus("正在复制...");
+  };
+
   const doTranslate = () => {
     if (!problem) return;
     setTranslating(true);
@@ -92,7 +98,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
         setStatus(`已加载题面：${message.problem?.title ?? ""}`);
         setIsLoading(false);
       }
-      if (message.type === "loading") {
+      if (message.type === "loading" || message.type === "update") {
         setStatus(message.text ?? "加载中...");
       }
       if (message.type === "error") {
@@ -103,8 +109,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
       if (message.type === "cf_challenge") {
         setCfUrl(message.url ?? null);
         setIsLoading(false);
-        setShowSettings(true);
-        setStatus("AtCoder 触发 Cloudflare 验证，请在浏览器中完成验证，然后将 Cookie 粘贴到设置中");
+        setStatus("AtCoder 触发 Cloudflare 验证，插件无法直接访问，请在浏览器中使用");
       }
       if (message.type === "loginRequired") {
         setIsLoading(false);
@@ -302,9 +307,14 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                   <div className="text-[13px] font-semibold">{problem.title}</div>
                   <div className="text-[12px] opacity-60">{problem.url}</div>
                 </div>
-                <Button onClick={doTranslate} disabled={translating} size="sm" className="h-[26px] text-[11px]">
-                  {translating ? "翻译中..." : "翻译"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={doTranslate} disabled={translating} size="sm" className="h-[26px] text-[11px]">
+                    {translating ? "翻译中..." : "翻译"}
+                  </Button>
+                  <Button onClick={doCopyMarkdown} size="sm" variant="secondary" className="h-[26px] text-[11px]">
+                    复制 Markdown
+                  </Button>
+                </div>
               </div>
 
               {problem.statement && (
@@ -375,25 +385,17 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
 
           {cfUrl && (
             <div className="p-6 flex flex-col items-center justify-center gap-4">
-              <div className="text-[14px] font-medium text-yellow-600">需要 Cloudflare 验证</div>
+              <div className="text-[14px] font-medium text-yellow-600">Cloudflare 验证</div>
               <div className="text-[12px] opacity-70 text-center max-w-md">
-                <p className="mb-1">AtCoder 触发了 Cloudflare 验证，请按以下步骤操作：</p>
-                <ol className="text-left list-decimal pl-4 space-y-1">
-                  <li>点击下方按钮在浏览器中打开 AtCoder</li>
-                  <li>完成 Cloudflare 人机验证并登录</li>
-                  <li>按 <kbd className="px-1 rounded border border-[var(--vscode-input-border)]">F12</kbd> 复制 <b>REVEL_SESSION</b> 的 Cookie</li>
-                  <li>在插件设置 ⚙ 中粘贴 Cookie 后重试</li>
-                </ol>
+                <p className="mb-2">AtCoder 触发了 Cloudflare 验证，插件无法直接访问 AtCoder。</p>
+                <p>请直接在浏览器中打开 AtCoder 使用。</p>
               </div>
               <div className="flex gap-3 mt-2 flex-wrap justify-center">
                 <Button onClick={() => vscode.postMessage({ command: "openBrowser", url: cfUrl })} className="h-[32px] text-[12px]">
-                  在浏览器中打开并验证
+                  在浏览器中打开
                 </Button>
-                <Button onClick={() => { setShowSettings(true); }} className="h-[32px] text-[12px]">
-                  打开设置粘贴 Cookie
-                </Button>
-                <Button onClick={() => { setCfUrl(null); void loadContest(contest); }} className="h-[32px] text-[12px]">
-                  验证完成，重试
+                <Button onClick={() => { setCfUrl(null); }} className="h-[32px] text-[12px]">
+                  关闭
                 </Button>
               </div>
             </div>
