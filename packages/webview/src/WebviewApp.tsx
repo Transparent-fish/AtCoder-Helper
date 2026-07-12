@@ -26,6 +26,10 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   const [cookieInput, setCookieInput] = React.useState("");
   const [hasCookie, setHasCookie] = React.useState(false);
   const [showSettings, setShowSettings] = React.useState(false);
+  const [signed, setSigned] = React.useState(false);
+  const [registrationMessage, setRegistrationMessage] = React.useState<string | null>(null);
+  const [Rated, setRated] = React.useState(false);
+  const [isRated, setIsRated] = React.useState(true);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const loadContest = async (nextContest: string) => {
@@ -39,6 +43,12 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
     setStatus(`正在抓取 ${nextContest}/${task} 的题面...`);
     setTranslated(null);
     vscode.postMessage({ command: "loadProblem", contest: nextContest, task });
+  };
+
+  const handleRegister = () => {
+    setRegistrationMessage(null);
+    setStatus(`正在报名 ${contest} ...`);
+    vscode.postMessage({ command: "registerContest", contest, rated: isRated });
   };
 
   const doTranslate = () => {
@@ -69,8 +79,13 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
         setTasks(nextTasks);
         setSelectedTask("");
         setProblem(null);
+        setRated(false);
+        setIsRated(true);
         setStatus(`已加载 ${nextTasks.length} 道题目`);
         setIsLoading(false);
+      }
+      if (message.type === "contestInfo") {
+        setRated(message.Rated ?? false);
       }
       if (message.type === "problem") {
         setProblem(message.problem ?? null);
@@ -107,6 +122,12 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
         if (message.statusMessage) {
           setStatus(message.statusMessage);
         }
+      }
+      if (message.type === "registrationStatus") {
+        setSigned(message.signed ?? false);
+        setRegistrationMessage(message.registrationMessage ?? null);
+        setStatus(message.registrationMessage ?? (message.signed ? "报名成功" : "报名失败"));
+        setIsLoading(false);
       }
     };
 
@@ -218,7 +239,33 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
             <Button onClick={() => void loadContest(contest)} disabled={isLoading} className="h-[28px] text-[12px]">
               加载题目
             </Button>
+            {Rated && (
+              <label className="flex items-center gap-1 text-[12px] select-none cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isRated}
+                  onChange={(e) => setIsRated(e.target.checked)}
+                  className="w-3 h-3"
+                />
+                评级报名
+              </label>
+            )}
+            <Button
+              onClick={handleRegister}
+              disabled={isLoading || !hasCookie}
+              variant={signed ? "secondary" : "primary"}
+              size="sm"
+              className="h-[28px] text-[12px]"
+              title={!hasCookie ? "请先设置 AtCoder Cookie" : signed ? "已报名" : "报名比赛"}
+            >
+              {signed ? "已报名" : "报名比赛"}
+            </Button>
           </div>
+          {registrationMessage && (
+            <div className={`text-[12px] ${signed ? "text-green-500" : "text-red-500"}`}>
+              {registrationMessage}
+            </div>
+          )}
           <div className="text-[12px] opacity-70">{status}</div>
         </div>
 

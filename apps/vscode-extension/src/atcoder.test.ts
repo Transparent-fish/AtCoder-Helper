@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { parseProblemPage } from "./atcoder";
+import { setSessionCookie, getSessionCookie } from "./tools/fetch";
 
 const sampleHtml = `
 <html>
@@ -44,7 +45,6 @@ assert.ok(mathResult.constraints.includes('class="katex"'), "should have math re
 console.log("HTML/LaTeX rendering test passed");
 
 // Cookie tests
-import { setSessionCookie, getSessionCookie } from "./atcoder";
 assert.strictEqual(getSessionCookie(), "", "default cookie should be empty");
 setSessionCookie("REVEL_SESSION=test123");
 assert.strictEqual(getSessionCookie(), "REVEL_SESSION=test123", "cookie should be set");

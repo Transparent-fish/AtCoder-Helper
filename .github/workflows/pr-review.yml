@@ -1,0 +1,114 @@
+name: PR Review
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Code Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8.10.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - id: lint
+        continue-on-error: true
+        run: pnpm lint 2>&1 | tee lint_output.txt
+
+      - id: build
+        continue-on-error: true
+        run: pnpm build 2>&1 | tee build_output.txt
+
+      - id: test
+        continue-on-error: true
+        run: pnpm test:unit 2>&1 | tee test_output.txt
+        working-directory: apps/vscode-extension
+
+      - id: linelength
+        continue-on-error: true
+        shell: bash
+        run: |
+          overages=""
+          while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              results=$(node -e "
+                var fs=require('fs');
+                var lines=fs.readFileSync('$file','utf-8').split('\n');
+                var start=-1,name='';
+                for(var i=0;i<lines.length;i++){
+                  var m=lines[i].match(/^\s*(export\s+)?(async\s+)?function\s+(\w+)/);
+                  if(m){
+                    if(start>=0){
+                      var cnt=i-start;
+                      if(cnt>130)console.log(name+' in $file ('+cnt+' lines, line '+(start+1)+')');
+                    }
+                    start=i;name=m[3];
+                  }
+                }
+              ")
+              if [ -n "$results" ]; then overages="$overages"$'\n'"$results"; fi
+            fi
+          done < <(find apps packages -name "*.ts" -o -name "*.tsx")
+          echo "$overages" | tee linelength_output.txt
+          if [ -z "$overages" ]; then echo "passed=true" >> $GITHUB_OUTPUT; else echo "passed=false" >> $GITHUB_OUTPUT; fi
+
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD: ${{ steps.build.outcome }}
+          LINT: ${{ steps.lint.outcome }}
+          TEST: ${{ steps.test.outcome }}
+          LL: ${{ steps.linelength.outputs.passed }}
+        shell: bash
+        run: |
+          echo "## PR 审查报告" > comment.md
+          echo "" >> comment.md
+          echo "### 检查结果" >> comment.md
+          echo "" >> comment.md
+          echo "| 检查项 | 状态 |" >> comment.md
+          echo "|--------|------|" >> comment.md
+
+          if [ "$BUILD" = "success" ]; then echo "| \`pnpm build\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm build\` | :x: |" >> comment.md; fi
+          if [ "$LINT" = "success" ]; then echo "| \`pnpm lint\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm lint\` | :x: |" >> comment.md; fi
+          if [ "$TEST" = "success" ]; then echo "| \`pnpm test\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm test\` | :x: |" >> comment.md; fi
+          if [ "$LL" = "true" ]; then echo "| 函数 <= 130 行 | :white_check_mark: |" >> comment.md; else echo "| 函数 <= 130 行 | :x: |" >> comment.md; fi
+
+          echo "" >> comment.md
+          echo "### 未通过的检查" >> comment.md
+          echo "" >> comment.md
+
+          any_fail=false
+          if [ "$BUILD" != "success" ]; then echo "- [ ] \`pnpm build\`" >> comment.md; any_fail=true; fi
+          if [ "$LINT" != "success" ]; then echo "- [ ] \`pnpm lint\`" >> comment.md; any_fail=true; fi
+          if [ "$TEST" != "success" ]; then echo "- [ ] \`pnpm test\`" >> comment.md; any_fail=true; fi
+          if [ "$LL" != "true" ]; then echo "- [ ] 函数长度不超过 130 行" >> comment.md; any_fail=true; fi
+
+          if [ "$any_fail" = false ]; then echo "全部通过，无需修改。" >> comment.md; fi
+
+          echo "" >> comment.md
+          echo "---" >> comment.md
+          echo "" >> comment.md
+          echo "*自动生成 by PR Review workflow*" >> comment.md
+
+          gh pr comment ${{ github.event.pull_request.number }} --body "$(cat comment.md)"
+
+          if [ "$any_fail" = true ]; then exit 1; fi
