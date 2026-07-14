@@ -1,7 +1,35 @@
 import { AtCoderProblem } from "../atcoder";
 
+function decodeEntities(text: string): string {
+    return text
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&nbsp;/g, " ");
+}
+
 function htmlToText(html: string): string {
-    let text = html
+    let text = html;
+    text = text.replace(
+        /<div\s+class="katex-display"[^>]*>[\s\S]*?<annotation\s+encoding="application\/x-tex">([\s\S]*?)<\/annotation>[\s\S]*?<\/div>/gi,
+        (_, formula) => `\n$$${decodeEntities(formula)}$$\n`
+    );
+    text = text.replace(
+        /<annotation\s+encoding="application\/x-tex">([\s\S]*?)<\/annotation>/gi,
+        (_, formula) => `$${decodeEntities(formula)}$`
+    );
+    text = text.replace(
+        /<div\s+class="math-fallback"[^>]*>\\\[([\s\S]*?)\\]<\/div>/gi,
+        (_, formula) => `\n$$${decodeEntities(formula)}$$\n`
+    );
+    text = text.replace(
+        /<span\s+class="math-fallback"[^>]*>\\\(([\s\S]*?)\\\)<\/span>/gi,
+        (_, formula) => `$${decodeEntities(formula)}$`
+    );
+
+    text = text
         .replace(/<pre><code>([\s\S]*?)<\/code><\/pre>/gi, "```\n$1\n```\n")
         .replace(/<br\s*\/?>/gi, "\n")
         .replace(/<\/p>\s*<p[^>]*>/gi, "\n\n")
@@ -9,7 +37,7 @@ function htmlToText(html: string): string {
         .replace(/<\/li>/gi, "")
         .replace(/<code>([\s\S]*?)<\/code>/gi, "`$1`")
         .replace(/<var>([\s\S]*?)<\/var>/gi, "$1")
-        .replace(/<\/?[^>]+>/g, "")
+        .replace(/<\/?[a-zA-Z][a-zA-Z0-9]*\b[^>]*>/g, "")
         .replace(/&amp;/g, "&")
         .replace(/&lt;/g, "<")
         .replace(/&gt;/g, ">")

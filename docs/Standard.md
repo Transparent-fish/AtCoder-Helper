@@ -30,7 +30,6 @@ vscode-boilerplate/
 - 使用 **camelCase** 命名变量和函数
 - 使用 **PascalCase** 命名类、接口、类型、React 组件
 - 类型定义优先使用 `interface`，尽量不使用 `type`
-- 逻辑判断优先使用 `if`，尽量不使用 `switch`
 - 使用 `export function` / `export async function` 导出，避免 `export default`
 - 禁止使用 `any`，使用 `unknown` 替代（无法避免时需加注释说明）
 
