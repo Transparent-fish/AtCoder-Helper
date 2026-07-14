@@ -3,7 +3,7 @@ import { Button, Card, Input, Spinner } from "@template/ui";
 import "./styles.css";
 
 import { useVSCode } from "./VSCodeProvider";
-import type { WebviewMessage } from "./types";
+import type { WebviewMessage, ContestProblem, SampleCase } from "./types";
 import { HtmlContent, TranslatedBlock } from "./components/HtmlContent";
 
 export interface WebviewAppProps {
@@ -17,7 +17,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   const [contest, setContest] = React.useState("abc345");
   const [tasks, setTasks] = React.useState<Array<{ label: string; value: string; url: string }>>([]);
   const [selectedTask, setSelectedTask] = React.useState<string>("");
-  const [problem, setProblem] = React.useState<any>(null);
+  const [problem, setProblem] = React.useState<ContestProblem | null>(null);
   const [status, setStatus] = React.useState("输入比赛代号并加载题目列表");
   const [isLoading, setIsLoading] = React.useState(false);
   const [cfUrl, setCfUrl] = React.useState<string | null>(null);
@@ -358,7 +358,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               )}
 
               {problem.samples?.length > 0 ? (
-                problem.samples.map((sample: any) => (
+                problem.samples.map((sample: SampleCase) => (
                   <div key={sample.index} className="space-y-2">
                     <div className="text-[12px] font-semibold">Sample {sample.index}</div>
                     <div className="rounded bg-[var(--vscode-input-background)] p-2">

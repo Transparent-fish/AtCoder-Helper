@@ -1,16 +1,28 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { fetchAtCoderProblem, fetchAtCoderTasks } from "./atcoder";
+import { fetchAtCoderProblem, fetchAtCoderTasks, AtCoderProblem } from "./atcoder";
 import { CfError, ProxyError, LoginRequiredError, setSessionCookie } from "./tools/fetch";
 import { fetchContest, signedUpContest } from "./tools/SignUpContest";
 import { translateTextRaw } from "./tools/deepl";
 import { copyMarkdown } from "./tools/copy";
 
+interface IncomingMessage {
+  command?: string;
+  contest?: string;
+  task?: string;
+  url?: string;
+  payload?: Record<string, string>;
+  targetLang?: string;
+  text?: string;
+  rated?: boolean;
+  problem?: AtCoderProblem;
+}
+
 const log = {
-  info: (...args: any[]) => {
+  info: (...args: unknown[]) => {
     console.log("[Extension]", ...args);
   },
-  error: (...args: any[]) => {
+  error: (...args: unknown[]) => {
     console.error("[Extension]", ...args);
     vscode.window.showErrorMessage(args.join(" "));
   },
@@ -32,7 +44,7 @@ function getWebviewContent(webviewJsSrc: vscode.Uri): string {
   </html>`;
 }
 
-function handleErrorWithCfAndLogin(error: unknown, send: (payload: any) => void): boolean {
+function handleErrorWithCfAndLogin(error: unknown, send: (payload: Record<string, unknown>) => void): boolean {
   if (error instanceof CfError) {
     vscode.window.showErrorMessage(error.message, "在浏览器中打开").then((choice) => {
       if (choice === "在浏览器中打开") vscode.env.openExternal(vscode.Uri.parse(error.url));
@@ -63,7 +75,7 @@ function handleErrorWithCfAndLogin(error: unknown, send: (payload: any) => void)
   return false;
 }
 
-async function handleContestLoad(contest: string, send: (payload: any) => void) {
+async function handleContestLoad(contest: string, send: (payload: Record<string, unknown>) => void) {
   send({ type: "loading", text: `正在抓取 ${contest} 的题目列表...` });
   try {
     const tasks = await fetchAtCoderTasks(contest);
@@ -83,7 +95,7 @@ async function handleContestLoad(contest: string, send: (payload: any) => void) 
   }
 }
 
-async function handleProblemLoad(contest: string, task: string, send: (payload: any) => void) {
+async function handleProblemLoad(contest: string, task: string, send: (payload: Record<string, unknown>) => void) {
   send({ type: "loading", text: `正在抓取 ${contest}/${task} 的题面...` });
   try {
     const problem = await fetchAtCoderProblem(contest, task);
@@ -99,7 +111,7 @@ async function handleTranslate(
   payload: Record<string, string> | undefined,
   targetLang: string | undefined,
   context: vscode.ExtensionContext,
-  send: (payload: any) => void,
+  send: (payload: Record<string, unknown>) => void,
 ) {
   const lang = targetLang ?? "ZH";
   const texts = payload ?? {};
@@ -125,7 +137,7 @@ async function handleTranslate(
   }
 }
 
-async function handleGetCookie(context: vscode.ExtensionContext, send: (payload: any) => void) {
+async function handleGetCookie(context: vscode.ExtensionContext, send: (payload: Record<string, unknown>) => void) {
   const storedCookie = await context.secrets.get("atcoderCookie");
   const masked = storedCookie ? storedCookie.substring(0, 20) + "..." : "";
   send({
@@ -139,7 +151,7 @@ async function handleGetCookie(context: vscode.ExtensionContext, send: (payload:
 async function handleSetCookie(
   cookie: string | undefined,
   context: vscode.ExtensionContext,
-  send: (payload: any) => void,
+  send: (payload: Record<string, unknown>) => void,
 ) {
   if (cookie) {
     if (!cookie.startsWith("REVEL_SESSION=")) {
@@ -161,7 +173,7 @@ async function handleSetCookie(
   }
 }
 
-async function handleRegistration(contest: string, rated: boolean | undefined, send: (payload: any) => void) {
+async function handleRegistration(contest: string, rated: boolean | undefined, send: (payload: Record<string, unknown>) => void) {
   send({ type: "loading", text: `正在报名 ${contest} ...` });
   try {
     const page = await fetchContest(contest);
@@ -250,17 +262,19 @@ function createShowWebview(context: vscode.ExtensionContext) {
 
     panel.webview.html = getWebviewContent(webviewJsSrc);
 
-    const sendToWebview = (payload: unknown) => {
+    const sendToWebview = (payload: Record<string, unknown>) => {
       panel.webview.postMessage(payload);
     };
 
     panel.webview.onDidReceiveMessage(
-      async (message) => {
+      async (message: IncomingMessage) => {
         switch (message.command) {
           case "loadContest":
+            if (!message.contest) return;
             await handleContestLoad(message.contest, sendToWebview);
             return;
           case "loadProblem":
+            if (!message.contest || !message.task) return;
             await handleProblemLoad(message.contest, message.task, sendToWebview);
             return;
           case "openBrowser":
@@ -282,6 +296,7 @@ function createShowWebview(context: vscode.ExtensionContext) {
             await handleSetCookie(message.text, context, sendToWebview);
             return;
           case "registerContest":
+            if (!message.contest) return;
             await handleRegistration(message.contest, message.rated, sendToWebview);
             return;
           case "copyMarkdown":
@@ -291,8 +306,8 @@ function createShowWebview(context: vscode.ExtensionContext) {
             }
             return;
           case "alert":
-            vscode.window.showInformationMessage(message.text);
-            sendToWebview({ type: "update", text: `Extension received: ${message.text}` });
+            vscode.window.showInformationMessage(message.text ?? "");
+            sendToWebview({ type: "update", text: `Extension received: ${message.text ?? ""}` });
             return;
         }
       },
