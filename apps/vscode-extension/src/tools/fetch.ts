@@ -7,7 +7,7 @@ import * as tls from "tls";
 export class CfError extends Error {
   url: string;
   constructor(url: string) {
-    super(`AtCoder 需要 Cloudflare 验证，请在浏览器中打开 ${url} 完成验证后重试`);
+    super(`AtCoder 触发了 Cloudflare 验证，插件无法绕过。请在浏览器中直接访问 AtCoder。\nURL: ${url}`);
     this.name = "CfError";
     this.url = url;
   }
@@ -43,22 +43,18 @@ export class LoginRequiredError extends Error {
   }
 }
 
-const cfPatterns = [
+const cfSpecific = [
   "Just a moment",
   "Checking your browser",
   "cf-challenge",
-  "challenge-form",
-  "Cloudflare",
   "cf-browser-verification",
-  "attention required",
   "checking-browser",
-  "challenge-platform",
   "cf-im-under-attack",
 ];
 
 function isCfChallenge(body: string): boolean {
   const lower = body.toLowerCase();
-  const matched = cfPatterns.find((p) => lower.includes(p));
+  const matched = cfSpecific.find((p) => lower.includes(p));
   if (matched) {
     console.log(`[isCfChallenge] 匹配到 CF 特征: "${matched}"`);
   }
@@ -239,8 +235,14 @@ function handleResponse(
       return;
     }
     if (res.statusCode === 403) {
-      console.log(`${logPrefix} 403 但非 CF，可能 Cookie 无效`);
-      reject(new Error(`访问被拒绝 (403)。Cookie 可能无效或已过期，请重新登录 AtCoder 获取新的 REVEL_SESSION`));
+      const broad = ["Cloudflare", "challenge", "attention required"].some((p) => body.toLowerCase().includes(p));
+      if (broad) {
+        console.log(`${logPrefix} 403 + 泛化 CF 特征，判定为 Cloudflare 挑战`);
+        reject(new CfError(url));
+      } else {
+        console.log(`${logPrefix} 403 但非 CF，可能 Cookie 无效`);
+        reject(new Error(`访问被拒绝 (403)。Cookie 可能无效或已过期，请重新登录 AtCoder 获取新的 REVEL_SESSION`));
+      }
       return;
     }
     if (isLoginPage(body)) {
