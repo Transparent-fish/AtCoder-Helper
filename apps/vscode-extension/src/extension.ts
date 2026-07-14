@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { fetchAtCoderProblem, fetchAtCoderTasks } from "./atcoder";
 import { CfError, ProxyError, LoginRequiredError, setSessionCookie } from "./tools/fetch";
-import { fetchContest, signedUpContest } from "./SignUpContest";
+import { fetchContest, signedUpContest } from "./tools/SignUpContest";
 import { translateTextRaw } from "./tools/deepl";
 import { copyMarkdown } from "./tools/copy";
 
@@ -72,6 +72,14 @@ async function handleContestLoad(contest: string, send: (payload: any) => void) 
     if (!handleErrorWithCfAndLogin(error, send)) {
       send({ type: "error", text: error instanceof Error ? error.message : "抓取题目失败" });
     }
+    return;
+  }
+
+  // 异步获取比赛注册信息
+  try {
+    const contestInfo = await fetchContest(contest);
+    send({ type: "contestInfo", Rated: contestInfo.Rated });
+  } catch {
   }
 }
 
