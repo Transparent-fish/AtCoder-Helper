@@ -1,0 +1,105 @@
+import * as vscode from "vscode";
+import { copyMarkdown } from "./copy";
+import { IncomingMessage } from "./types";
+import { handleContestLoad, handleProblemLoad } from "../extension";
+import { handleTranslate, handleGetCookie, handleSetCookie, handleRegistration } from "../extension";
+
+const loadCommands = new Set(["loadContest", "loadProblem", "openBrowser"]);
+const deeplCommands = new Set(["translate", "setApiKey"]);
+const cookie = new Set(["getCookie", "setCookie"]);
+const problem = new Set(["registerContest", "copyMarkdown", "alert"]);
+
+export async function runCommand(
+  message: IncomingMessage,
+  context: vscode.ExtensionContext,
+  sendToWebview: (payload: Record<string, unknown>) => void,
+) {
+  if (loadCommands.has(message.command!)) await runLoadCommand(message, sendToWebview);
+  else if (deeplCommands.has(message.command!)) await runDeepL(message, context, sendToWebview);
+  else if (cookie.has(message.command!)) await runCookie(message, context, sendToWebview);
+  else if (problem.has(message.command!)) await runProblem(message, context, sendToWebview);
+  else throw new Error("unknown command");
+}
+
+async function runProblem(
+  command: IncomingMessage,
+  context: vscode.ExtensionContext,
+  sendToWebview: (payload: Record<string, unknown>) => void,
+): Promise<boolean> {
+  switch (command.command) {
+    case "registerContest":
+      if (!command.contest) return false;
+      await handleRegistration(command.contest, command.rated, sendToWebview);
+      return true;
+    case "copyMarkdown":
+      if (command.problem) {
+        await vscode.env.clipboard.writeText(copyMarkdown(command.problem));
+        sendToWebview({ type: "update", text: "已复制到剪贴板" });
+      }
+      return true;
+    case "alert":
+      vscode.window.showInformationMessage(command.text ?? "");
+      sendToWebview({ type: "update", text: `Extension received: ${command.text ?? ""}` });
+      return true;
+    default:
+      return false;
+  }
+}
+
+async function runCookie(
+  command: IncomingMessage,
+  context: vscode.ExtensionContext,
+  sendToWebview: (payload: Record<string, unknown>) => void,
+): Promise<boolean> {
+  switch (command.command) {
+    case "getCookie":
+      await handleGetCookie(context, sendToWebview);
+      return true;
+    case "setCookie":
+      await handleSetCookie(command.text, context, sendToWebview);
+      return true;
+    default:
+      return false;
+  }
+}
+
+async function runDeepL(
+  command: IncomingMessage,
+  context: vscode.ExtensionContext,
+  sendToWebview: (payload: Record<string, unknown>) => void,
+): Promise<boolean> {
+  switch (command.command) {
+    case "translate":
+      await handleTranslate(command.payload, command.targetLang, context, sendToWebview);
+      return true;
+    case "setApiKey":
+      if (command.text?.trim()) {
+        await context.secrets.store("deeplApiKey", command.text.trim());
+        vscode.window.showInformationMessage("DeepL API Key 已保存");
+      }
+      return true;
+    default:
+      return false;
+  }
+}
+
+async function runLoadCommand(
+  command: IncomingMessage,
+  sendToWebview: (payload: Record<string, unknown>) => void,
+): Promise<boolean> {
+  switch (command.command) {
+    case "loadContest":
+      if (!command.contest) return false;
+      await handleContestLoad(command.contest, sendToWebview);
+      return true;
+    case "loadProblem":
+      if (!command.contest || !command.task) return false;
+      await handleProblemLoad(command.contest, command.task, sendToWebview);
+      return true;
+    case "openBrowser":
+      if (command.url) vscode.env.openExternal(vscode.Uri.parse(command.url));
+      return true;
+    default:
+      return false;
+  }
+}
