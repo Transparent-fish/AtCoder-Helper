@@ -85,8 +85,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
         setTasks(nextTasks);
         setSelectedTask("");
         setProblem(null);
-        setRated(false);
-        setIsRated(true);
+        setRated(true);
         setStatus(`已加载 ${nextTasks.length} 道题目`);
         setIsLoading(false);
       }

@@ -24,7 +24,7 @@ export async function fetchContest(contest: string): Promise<ContestPage> {
         const csrfMatch = from.match(/name="csrf_token"[^>]*value="([^"]*)"/i);
         csrfToken = csrfMatch ? (csrfMatch[1] ?? "") : "";
         signed = /<button[^>]*>Unregister<\/button>/i.test(from);
-        Rated = true; // 表单存在即表示可能有评级选项（step 2 的 rated_register 表单决定）
+        Rated = /rated_register/i.test(html);
     }
     return { contest, title, url, signed, csrfToken, Rated };
 }

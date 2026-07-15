@@ -76,12 +76,11 @@ export async function handleContestLoad(contest: string, send: (payload: Record<
     return;
   }
 
-  // 异步获取比赛注册信息
   try {
     const contestInfo = await fetchContest(contest);
     send({ type: "contestInfo", Rated: contestInfo.Rated });
-  } catch {
-    //不用处理
+  } catch (e) {
+    //不处理
   }
 }
 
