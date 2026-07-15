@@ -3,8 +3,8 @@ import type { VSCodeAPI, WebviewMessage } from "./types";
 
 interface VSCodeContextType {
   postMessage: (message: WebviewMessage) => void;
-  setState: (state: any) => void;
-  getState: () => any;
+  setState: (state: unknown) => void;
+  getState: () => unknown;
 }
 
 const VSCodeContext = createContext<VSCodeContextType | null>(null);
@@ -21,12 +21,13 @@ interface VSCodeProviderProps {
   children: React.ReactNode;
 }
 
-// 创建一个 mock VSCode API 用于开发环境
+let cachedApi: VSCodeAPI | null = null;
+
 const mockVSCodeAPI = (): VSCodeAPI => ({
   postMessage: (message: WebviewMessage) => {
     console.log("Mock postMessage:", message);
   },
-  setState: (state: any) => {
+  setState: (state: unknown) => {
     console.log("Mock setState:", state);
   },
   getState: () => {
@@ -35,15 +36,13 @@ const mockVSCodeAPI = (): VSCodeAPI => ({
   },
 });
 
-// 获取 VSCode API 的函数
 const getVSCodeAPI = (): VSCodeAPI => {
   try {
     if (typeof window.acquireVsCodeApi === 'function') {
-      // 使用 let 避免重复获取 API
-      if (!(window as any).vscodeApi) {
-        (window as any).vscodeApi = window.acquireVsCodeApi();
+      if (!cachedApi) {
+        cachedApi = window.acquireVsCodeApi();
       }
-      return (window as any).vscodeApi;
+      return cachedApi;
     }
   } catch (error) {
     console.warn('Failed to acquire VSCode API:', error);

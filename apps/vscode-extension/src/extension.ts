@@ -2,15 +2,16 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { fetchAtCoderProblem, fetchAtCoderTasks } from "./atcoder";
 import { CfError, ProxyError, LoginRequiredError, setSessionCookie } from "./tools/fetch";
-import { fetchContest, signedUpContest } from "./SignUpContest";
+import { fetchContest, signedUpContest } from "./tools/SignUpContest";
 import { translateTextRaw } from "./tools/deepl";
-import { copyMarkdown } from "./tools/copy";
+import { runCommand } from "./tools/command";
+import { IncomingMessage } from "./tools/types";
 
 const log = {
-  info: (...args: any[]) => {
+  info: (...args: unknown[]) => {
     console.log("[Extension]", ...args);
   },
-  error: (...args: any[]) => {
+  error: (...args: unknown[]) => {
     console.error("[Extension]", ...args);
     vscode.window.showErrorMessage(args.join(" "));
   },
@@ -32,7 +33,7 @@ function getWebviewContent(webviewJsSrc: vscode.Uri): string {
   </html>`;
 }
 
-function handleErrorWithCfAndLogin(error: unknown, send: (payload: any) => void): boolean {
+function handleErrorWithCfAndLogin(error: unknown, send: (payload: Record<string, unknown>) => void): boolean {
   if (error instanceof CfError) {
     vscode.window.showErrorMessage(error.message, "在浏览器中打开").then((choice) => {
       if (choice === "在浏览器中打开") vscode.env.openExternal(vscode.Uri.parse(error.url));
@@ -63,7 +64,7 @@ function handleErrorWithCfAndLogin(error: unknown, send: (payload: any) => void)
   return false;
 }
 
-async function handleContestLoad(contest: string, send: (payload: any) => void) {
+export async function handleContestLoad(contest: string, send: (payload: Record<string, unknown>) => void) {
   send({ type: "loading", text: `正在抓取 ${contest} 的题目列表...` });
   try {
     const tasks = await fetchAtCoderTasks(contest);
@@ -72,10 +73,18 @@ async function handleContestLoad(contest: string, send: (payload: any) => void) 
     if (!handleErrorWithCfAndLogin(error, send)) {
       send({ type: "error", text: error instanceof Error ? error.message : "抓取题目失败" });
     }
+    return;
+  }
+
+  try {
+    const contestInfo = await fetchContest(contest);
+    send({ type: "contestInfo", Rated: contestInfo.Rated });
+  } catch (e) {
+    //不处理
   }
 }
 
-async function handleProblemLoad(contest: string, task: string, send: (payload: any) => void) {
+export async function handleProblemLoad(contest: string, task: string, send: (payload: Record<string, unknown>) => void) {
   send({ type: "loading", text: `正在抓取 ${contest}/${task} 的题面...` });
   try {
     const problem = await fetchAtCoderProblem(contest, task);
@@ -87,11 +96,11 @@ async function handleProblemLoad(contest: string, task: string, send: (payload: 
   }
 }
 
-async function handleTranslate(
+export async function handleTranslate(
   payload: Record<string, string> | undefined,
   targetLang: string | undefined,
   context: vscode.ExtensionContext,
-  send: (payload: any) => void,
+  send: (payload: Record<string, unknown>) => void,
 ) {
   const lang = targetLang ?? "ZH";
   const texts = payload ?? {};
@@ -117,7 +126,7 @@ async function handleTranslate(
   }
 }
 
-async function handleGetCookie(context: vscode.ExtensionContext, send: (payload: any) => void) {
+export async function handleGetCookie(context: vscode.ExtensionContext, send: (payload: Record<string, unknown>) => void) {
   const storedCookie = await context.secrets.get("atcoderCookie");
   const masked = storedCookie ? storedCookie.substring(0, 20) + "..." : "";
   send({
@@ -128,10 +137,10 @@ async function handleGetCookie(context: vscode.ExtensionContext, send: (payload:
   });
 }
 
-async function handleSetCookie(
+export async function handleSetCookie(
   cookie: string | undefined,
   context: vscode.ExtensionContext,
-  send: (payload: any) => void,
+  send: (payload: Record<string, unknown>) => void,
 ) {
   if (cookie) {
     if (!cookie.startsWith("REVEL_SESSION=")) {
@@ -153,7 +162,7 @@ async function handleSetCookie(
   }
 }
 
-async function handleRegistration(contest: string, rated: boolean | undefined, send: (payload: any) => void) {
+export async function handleRegistration(contest: string, rated: boolean | undefined, send: (payload: Record<string, unknown>) => void) {
   send({ type: "loading", text: `正在报名 ${contest} ...` });
   try {
     const page = await fetchContest(contest);
@@ -242,52 +251,12 @@ function createShowWebview(context: vscode.ExtensionContext) {
 
     panel.webview.html = getWebviewContent(webviewJsSrc);
 
-    const sendToWebview = (payload: unknown) => {
+    const sendToWebview = (payload: Record<string, unknown>) => {
       panel.webview.postMessage(payload);
     };
 
     panel.webview.onDidReceiveMessage(
-      async (message) => {
-        switch (message.command) {
-          case "loadContest":
-            await handleContestLoad(message.contest, sendToWebview);
-            return;
-          case "loadProblem":
-            await handleProblemLoad(message.contest, message.task, sendToWebview);
-            return;
-          case "openBrowser":
-            if (message.url) vscode.env.openExternal(vscode.Uri.parse(message.url));
-            return;
-          case "translate":
-            await handleTranslate(message.payload, message.targetLang, context, sendToWebview);
-            return;
-          case "setApiKey":
-            if (message.text?.trim()) {
-              await context.secrets.store("deeplApiKey", message.text.trim());
-              vscode.window.showInformationMessage("DeepL API Key 已保存");
-            }
-            return;
-          case "getCookie":
-            await handleGetCookie(context, sendToWebview);
-            return;
-          case "setCookie":
-            await handleSetCookie(message.text, context, sendToWebview);
-            return;
-          case "registerContest":
-            await handleRegistration(message.contest, message.rated, sendToWebview);
-            return;
-          case "copyMarkdown":
-            if (message.problem) {
-              await vscode.env.clipboard.writeText(copyMarkdown(message.problem));
-              sendToWebview({ type: "update", text: "已复制到剪贴板" });
-            }
-            return;
-          case "alert":
-            vscode.window.showInformationMessage(message.text);
-            sendToWebview({ type: "update", text: `Extension received: ${message.text}` });
-            return;
-        }
-      },
+      (message: IncomingMessage) => { runCommand(message, context, sendToWebview); },
       undefined,
       context.subscriptions
     );

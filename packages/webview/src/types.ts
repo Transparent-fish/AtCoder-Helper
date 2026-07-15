@@ -1,3 +1,20 @@
+export interface SampleCase {
+  index: number;
+  input: string;
+  output: string;
+}
+
+export interface ContestProblem {
+  contest: string;
+  title: string;
+  url: string;
+  statement: string;
+  constraints: string;
+  inputFormat: string;
+  outputFormat: string;
+  samples: SampleCase[];
+}
+
 export interface WebviewMessage {
   type?: string;
   command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest' | 'copyMarkdown';
@@ -5,12 +22,12 @@ export interface WebviewMessage {
   text?: string;
   contest?: string;
   task?: string;
-  payload?: any;
+  payload?: Record<string, string>;
   url?: string;
   targetLang?: string;
   translated?: Record<string, string>;
   tasks?: Array<{ label: string; value: string; url: string }>;
-  problem?: any;
+  problem?: ContestProblem;
   hasCookie?: boolean;
   masked?: string;
   signed?: boolean;
@@ -21,8 +38,8 @@ export interface WebviewMessage {
 
 export interface VSCodeAPI {
   postMessage: (message: WebviewMessage) => void;
-  setState: (state: any) => void;
-  getState: () => any;
+  setState: (state: unknown) => void;
+  getState: () => unknown;
 }
 
 declare global {

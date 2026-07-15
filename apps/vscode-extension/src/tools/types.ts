@@ -1,0 +1,13 @@
+import { AtCoderProblem } from "../atcoder";
+
+export interface IncomingMessage {
+  command?: string;
+  contest?: string;
+  task?: string;
+  url?: string;
+  payload?: Record<string, string>;
+  targetLang?: string;
+  text?: string;
+  rated?: boolean;
+  problem?: AtCoderProblem;
+}

@@ -1,5 +1,6 @@
 import * as https from "https";
 import * as http from "http";
+import * as stream from "stream";
 import * as zlib from "zlib";
 import * as net from "net";
 import * as tls from "tls";
@@ -84,7 +85,7 @@ function isLoginPage(body: string): boolean {
 
 const BROWSER_HEADERS = {
   "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
   Accept:
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
   "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
@@ -127,27 +128,28 @@ function isProxyError(err: Error): boolean {
 
 function getAgent(url: string): http.Agent | https.Agent {
     const isHttps = url.startsWith("https");
-    const baseAgent = isHttps ? https : http;
-    return new (baseAgent as any).Agent({
+    const Agent = isHttps ? https.Agent : http.Agent;
+    const agentOptions = {
         keepAlive: true,
         keepAliveMsecs: 1000,
-        createConnection: (options: any, callback: any) => {
-            const hostname = options.hostname || options.host || "localhost";
+        createConnection: (options: net.TcpSocketConnectOpts, callback?: (err: Error | null, socket: net.Socket) => void): void => {
+            const hostname = options.host || "localhost";
             const port = options.port || (isHttps ? 443 : 80);
             const socket = net.connect(port, hostname, () => {
                 if (isHttps) {
-                    callback(null, tls.connect({
+                    callback?.(null, tls.connect({
                         socket,
                         host: hostname,
                         servername: hostname,
                     }));
                 } else {
-                    callback(null, socket);
+                    callback?.(null, socket);
                 }
             });
-            socket.on("error", callback);
+            socket.on("error", (err) => callback?.(err, undefined as unknown as net.Socket));
         },
-    });
+    };
+    return new (Agent as new (opts: Record<string, unknown>) => http.Agent | https.Agent)(agentOptions);
 }
 
 const directAgents = new Map<string, http.Agent | https.Agent>();
@@ -190,7 +192,7 @@ function handleResponse(
   res: http.IncomingMessage,
   restoreSaved: Record<string, string | undefined>,
   resolve: (value: string | PromiseLike<string>) => void,
-  reject: (reason: any) => void,
+  reject: (reason: unknown) => void,
   redirectFetcher: (url: string) => Promise<string>,
   logPrefix: string = "[fetchText]",
 ) {
@@ -210,20 +212,20 @@ function handleResponse(
   }
 
   const encoding = res.headers["content-encoding"] || "";
-  let stream: any = res;
+  let readableStream: stream.Readable = res;
   if (encoding.includes("br")) {
-    stream = res.pipe(zlib.createBrotliDecompress());
+    readableStream = res.pipe(zlib.createBrotliDecompress());
   } else if (encoding.includes("gzip")) {
-    stream = res.pipe(zlib.createGunzip());
+    readableStream = res.pipe(zlib.createGunzip());
   } else if (encoding.includes("deflate")) {
-    stream = res.pipe(zlib.createInflate());
+    readableStream = res.pipe(zlib.createInflate());
   }
 
   const chunks: Buffer[] = [];
-  stream.on("data", (chunk: Buffer) => {
+  readableStream.on("data", (chunk: Buffer) => {
     chunks.push(chunk);
   });
-  stream.on("end", () => {
+  readableStream.on("end", () => {
     const body = Buffer.concat(chunks).toString("utf8");
     console.log(`${logPrefix} 响应体:`, url, `status=${res.statusCode}`, `body.length=${body.length}`);
 
@@ -269,7 +271,7 @@ function handleResponse(
     console.log(`${logPrefix} 请求成功:`, url, `body.length=${body.length}`);
     resolve(body);
   });
-  stream.on("error", (err: Error) => {
+  readableStream.on("error", (err: Error) => {
     restoreProxyEnv(restoreSaved);
     reject(err);
   });
