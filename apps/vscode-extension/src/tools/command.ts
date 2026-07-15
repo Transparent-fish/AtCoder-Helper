@@ -1,13 +1,22 @@
 import * as vscode from "vscode";
 import { copyMarkdown } from "./copy";
 import { IncomingMessage } from "./types";
-import { handleContestLoad, handleProblemLoad } from "../extension";
-import { handleTranslate, handleGetCookie, handleSetCookie, handleRegistration } from "../extension";
+import {
+  handleContestLoad,
+  handleProblemLoad,
+  handleTranslate,
+  handleGetCookie,
+  handleSetCookie,
+  handleRegistration,
+  handleFetchSubmitPage,
+  handleSubmitCode,
+} from "../extension";
 
 const loadCommands = new Set(["loadContest", "loadProblem", "openBrowser"]);
 const deeplCommands = new Set(["translate", "setApiKey"]);
-const cookie = new Set(["getCookie", "setCookie"]);
-const problem = new Set(["registerContest", "copyMarkdown", "alert"]);
+const cookieCommands = new Set(["getCookie", "setCookie"]);
+const problemCommands = new Set(["registerContest", "copyMarkdown", "alert"]);
+const submitCommands = new Set(["fetchSubmitPage", "submitCode"]);
 
 export async function runCommand(
   message: IncomingMessage,
@@ -16,9 +25,25 @@ export async function runCommand(
 ) {
   if (loadCommands.has(message.command!)) await runLoadCommand(message, sendToWebview);
   else if (deeplCommands.has(message.command!)) await runDeepL(message, context, sendToWebview);
-  else if (cookie.has(message.command!)) await runCookie(message, context, sendToWebview);
-  else if (problem.has(message.command!)) await runProblem(message, context, sendToWebview);
+  else if (cookieCommands.has(message.command!)) await runCookie(message, context, sendToWebview);
+  else if (problemCommands.has(message.command!)) await runProblem(message, context, sendToWebview);
+  else if (submitCommands.has(message.command!)) await runSubmit(message, context, sendToWebview);
   else throw new Error("unknown command");
+}
+
+async function runSubmit(command: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,): Promise<boolean> {
+  switch (command.command) {
+    case "fetchSubmitPage":
+      if (!command.contest) return false;
+      await handleFetchSubmitPage(command.contest, sendToWebview);
+      return true;
+    case "submitCode":
+      if (!command.contest) return false;
+      await handleSubmitCode(command.contest, command.taskScreenName, command.languageId, command.sourceCode, sendToWebview);
+      return true;
+    default:
+      return false;
+  }
 }
 
 async function runProblem(

@@ -5,6 +5,7 @@ import { CfError, ProxyError, LoginRequiredError, setSessionCookie } from "./too
 import { fetchContest, signedUpContest } from "./tools/SignUpContest";
 import { translateTextRaw } from "./tools/deepl";
 import { runCommand } from "./tools/command";
+import { fetchSubmitPage, submitCodeWithRedirect } from "./tools/submit";
 import { IncomingMessage } from "./tools/types";
 
 const log = {
@@ -179,6 +180,43 @@ export async function handleRegistration(contest: string, rated: boolean | undef
   } catch (error) {
     if (!handleErrorWithCfAndLogin(error, send)) {
       send({ type: "registrationStatus", signed: false, registrationMessage: error instanceof Error ? error.message : "报名失败" });
+    }
+  }
+}
+
+export async function handleFetchSubmitPage(contest: string, send: (payload: Record<string, unknown>) => void) {
+  send({ type: "loading", text: `正在获取 ${contest} 提交页面信息...` });
+  try {
+    const pageData = await fetchSubmitPage(contest);
+    send({ type: "submitPage", submitTasks: pageData.tasks, languages: pageData.languages, csrfToken: pageData.csrfToken });
+    send({ type: "update", text: "已获取提交页面信息" });
+  } catch (error) {
+    if (!handleErrorWithCfAndLogin(error, send)) {
+      send({ type: "error", text: error instanceof Error ? error.message : "获取提交页面失败" });
+    }
+  }
+}
+
+export async function handleSubmitCode(
+  contest: string,
+  taskScreenName: string | undefined,
+  languageId: string | undefined,
+  sourceCode: string | undefined,
+  send: (payload: Record<string, unknown>) => void,
+) {
+  if (!taskScreenName || !languageId || !sourceCode) {
+    send({ type: "submitResult", submitResult: { success: false, message: "提交参数不完整" } });
+    return;
+  }
+  send({ type: "loading", text: "正在提交代码..." });
+  try {
+    const result = await submitCodeWithRedirect(contest, taskScreenName, languageId, sourceCode);
+    send({ type: "submitResult", submitResult: result });
+    if (result.success) send({ type: "update", text: "代码提交成功" });
+    else send({ type: "error", text: result.message });
+  } catch (error) {
+    if (!handleErrorWithCfAndLogin(error, send)) {
+      send({ type: "submitResult", submitResult: { success: false, message: error instanceof Error ? error.message : "提交失败" } });
     }
   }
 }

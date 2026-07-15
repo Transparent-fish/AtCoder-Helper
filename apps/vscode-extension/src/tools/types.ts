@@ -4,6 +4,9 @@ export interface IncomingMessage {
   command?: string;
   contest?: string;
   task?: string;
+  taskScreenName?: string;
+  languageId?: string;
+  sourceCode?: string;
   url?: string;
   payload?: Record<string, string>;
   targetLang?: string;
