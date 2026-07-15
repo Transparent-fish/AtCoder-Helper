@@ -257,9 +257,7 @@ function createShowWebview(context: vscode.ExtensionContext) {
     };
 
     panel.webview.onDidReceiveMessage(
-      async (message: IncomingMessage) => {
-        runCommand(message, context, sendToWebview);
-      },
+      (message: IncomingMessage) => { runCommand(message, context, sendToWebview); },
       undefined,
       context.subscriptions
     );
