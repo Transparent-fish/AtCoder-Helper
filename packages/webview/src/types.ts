@@ -15,18 +15,27 @@ export interface ContestProblem {
   samples: SampleCase[];
 }
 
+export interface SubmitResult {
+  success: boolean;
+  message: string;
+  url?: string;
+}
+
 export interface WebviewMessage {
   type?: string;
-  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest' | 'copyMarkdown';
+  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest' | 'copyMarkdown' | 'fetchSubmitPage' | 'submitCode';
   statusMessage?: string;
   text?: string;
   contest?: string;
   task?: string;
+  taskScreenName?: string;
+  languageId?: string;
+  sourceCode?: string;
   payload?: Record<string, string>;
   url?: string;
   targetLang?: string;
   translated?: Record<string, string>;
-  tasks?: Array<{ label: string; value: string; url: string }>;
+  tasks?: Array<{ label: string; value: string; url: string; status?: string }>;
   problem?: ContestProblem;
   hasCookie?: boolean;
   masked?: string;
@@ -34,6 +43,10 @@ export interface WebviewMessage {
   registrationMessage?: string;
   rated?: boolean;
   Rated?: boolean;
+  submitTasks?: Array<{ value: string; label: string }>;
+  languages?: Array<{ id: string; label: string }>;
+  csrfToken?: string;
+  submitResult?: SubmitResult;
 }
 
 export interface VSCodeAPI {

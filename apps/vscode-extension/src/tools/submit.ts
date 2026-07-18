@@ -18,6 +18,49 @@ export interface SubmitStatus {
     url?: string;
 }
 
+function extractSelectInner(html: string, attrName: string, attrValue: string): string | null {
+    const patterns = [
+        `${attrName}="${attrValue}"`,
+        `${attrName}='${attrValue}'`,
+    ];
+    for (const p of patterns) {
+        const regex = new RegExp(`<select[^>]*${p}[^>]*>([\\s\\S]*?)<\\/select>`, 'i');
+        const m = html.match(regex);
+        if (m) return m[1];
+    }
+    return null;
+}
+
+function decodeHtmlEntities(text: string): string {
+    return text
+        .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+        .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)))
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+}
+
+function parseOptions(html: string): Array<{ value: string; label: string }> {
+    const results: Array<{ value: string; label: string }> = [];
+    const optionRegex = /<option[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/gi;
+    let m: RegExpExecArray | null;
+    for (;(m = optionRegex.exec(html)) !== null;) {
+        const value = m[1];
+        if (value) results.push({ value, label: decodeHtmlEntities(m[2].trim()) });
+    }
+    return results;
+}
+
+function extractSelectOptions(html: string, name?: string, id?: string): Array<{ value: string; label: string }> {
+    let inner: string | null = null;
+    if (name) inner = extractSelectInner(html, "name", name);
+    if (!inner && id) inner = extractSelectInner(html, "id", id);
+    if (inner) return parseOptions(inner);
+    return [];
+}
+
 export async function fetchSubmitPage(contest: string): Promise<SubmitPage> {
     const url = `https://atcoder.jp/contests/${contest}/submit`;
     const html = await fetchText(url);
@@ -25,20 +68,24 @@ export async function fetchSubmitPage(contest: string): Promise<SubmitPage> {
     const csrfMatch = html.match(/name="csrf_token"[^>]*value="([^"]*)"/i);
     const csrfToken = csrfMatch ? csrfMatch[1] : "";
 
-    const tasks: Array<{ value: string; label: string }> = [];
-    const taskRegex = /<option[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/gi;
-    let taskMatch: RegExpExecArray | null;
-    for (;(taskMatch = taskRegex.exec(html)) !== null;) {
-        const value = taskMatch[1];
-        if (value) tasks.push({ value, label: taskMatch[2].trim() });
+    let tasks = extractSelectOptions(html, "data.TaskScreenName", "select-task");
+    if (tasks.length === 0) {
+        tasks = parseOptions(html).filter(o => o.value && !/^\d+$/.test(o.value));
     }
 
+    let langOptions = extractSelectOptions(html, "data.LanguageId", "select-lang");
+    if (langOptions.length === 0) {
+        const allOptions = parseOptions(html);
+        langOptions = allOptions.filter(o => /^\d+$/.test(o.value));
+    }
+
+    const seen = new Set<string>();
     const languages: LanguageOption[] = [];
-    const langRegex = /<option[^>]*value="(\d+)"[^>]*>([^<]*)<\/option>/gi;
-    let langMatch: RegExpExecArray | null;
-    for (;(langMatch = langRegex.exec(html)) !== null;) {
-        const value = langMatch[1];
-        if (value) languages.push({ id: value, label: langMatch[2].trim() });
+    for (const opt of langOptions) {
+        if (!seen.has(opt.value)) {
+            seen.add(opt.value);
+            languages.push({ id: opt.value, label: opt.label });
+        }
     }
 
     return { contest, csrfToken, tasks, languages };

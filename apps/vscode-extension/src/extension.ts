@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { fetchAtCoderProblem, fetchAtCoderTasks } from "./atcoder";
-import { CfError, ProxyError, LoginRequiredError, setSessionCookie } from "./tools/fetch";
+import { CfError, ProxyError, LoginRequiredError, setSessionCookie, fetchSubStatus } from "./tools/fetch";
 import { fetchContest, signedUpContest } from "./tools/SignUpContest";
 import { translateTextRaw } from "./tools/deepl";
 import { runCommand } from "./tools/command";
@@ -69,7 +69,13 @@ export async function handleContestLoad(contest: string, send: (payload: Record<
   send({ type: "loading", text: `正在抓取 ${contest} 的题目列表...` });
   try {
     const tasks = await fetchAtCoderTasks(contest);
-    send({ type: "tasks", tasks });
+    try {
+      const statusMap = await fetchSubStatus(contest);
+      const enriched = tasks.map(t => ({ ...t, status: statusMap.get(t.value) }));
+      send({ type: "tasks", tasks: enriched });
+    } catch {
+      send({ type: "tasks", tasks });
+    }
   } catch (error) {
     if (!handleErrorWithCfAndLogin(error, send)) {
       send({ type: "error", text: error instanceof Error ? error.message : "抓取题目失败" });
