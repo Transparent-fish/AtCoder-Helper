@@ -3,7 +3,7 @@ import { Button, Card, Input, Spinner } from "@template/ui";
 import "./styles.css";
 
 import { useVSCode } from "./VSCodeProvider";
-import type { WebviewMessage, ContestProblem, SampleCase } from "./types";
+import type { WebviewMessage, ContestProblem, SampleCase, SubmitResult } from "./types";
 import { HtmlContent, TranslatedBlock } from "./components/HtmlContent";
 
 export interface WebviewAppProps {
@@ -15,7 +15,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
 }) => {
   const vscode = useVSCode();
   const [contest, setContest] = React.useState("abc345");
-  const [tasks, setTasks] = React.useState<Array<{ label: string; value: string; url: string }>>([]);
+  const [tasks, setTasks] = React.useState<Array<{ label: string; value: string; url: string; status?: string }>>([]);
   const [selectedTask, setSelectedTask] = React.useState<string>("");
   const [problem, setProblem] = React.useState<ContestProblem | null>(null);
   const [status, setStatus] = React.useState("输入比赛代号并加载题目列表");
@@ -31,6 +31,14 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   const [Rated, setRated] = React.useState(false);
   const [isRated, setIsRated] = React.useState(true);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const [showSubmitPanel, setShowSubmitPanel] = React.useState(false);
+  const [submitTasks, setSubmitTasks] = React.useState<Array<{ value: string; label: string }>>([]);
+  const [submitLanguages, setSubmitLanguages] = React.useState<Array<{ id: string; label: string }>>([]);
+  const [selectedSubmitTask, setSelectedSubmitTask] = React.useState("");
+  const [selectedSubmitLanguage, setSelectedSubmitLanguage] = React.useState("");
+  const [sourceCode, setSourceCode] = React.useState("");
+  const [submitResult, setSubmitResult] = React.useState<SubmitResult | null>(null);
+  const [copiedSample, setCopiedSample] = React.useState<Record<string, boolean>>({});
 
   const loadContest = async (nextContest: string) => {
     setIsLoading(true);
@@ -67,6 +75,34 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
     if (problem.inputFormat) texts["输入格式"] = problem.inputFormat;
     if (problem.outputFormat) texts["输出格式"] = problem.outputFormat;
     vscode.postMessage({ command: "translate", payload: texts, targetLang: "ZH" });
+  };
+
+  const handleFetchSubmitPage = () => {
+    setSubmitResult(null);
+    setSubmitTasks([]);
+    setSubmitLanguages([]);
+    setSourceCode("");
+    setStatus("正在获取提交页面...");
+    vscode.postMessage({ command: "fetchSubmitPage", contest });
+  };
+
+  const copySampleText = (key: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedSample(prev => ({ ...prev, [key]: true }));
+    setTimeout(() => setCopiedSample(prev => ({ ...prev, [key]: false })), 1500);
+  };
+
+  const handleSubmitCode = () => {
+    if (!selectedSubmitTask || !selectedSubmitLanguage || !sourceCode.trim()) return;
+    setSubmitResult(null);
+    setStatus("正在提交代码...");
+    vscode.postMessage({
+      command: "submitCode",
+      contest,
+      taskScreenName: selectedSubmitTask,
+      languageId: selectedSubmitLanguage,
+      sourceCode,
+    });
   };
 
   React.useEffect(() => {
@@ -136,6 +172,28 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
         setRegistrationMessage(message.registrationMessage ?? null);
         setStatus(message.registrationMessage ?? (message.signed ? "报名成功" : "报名失败"));
         setIsLoading(false);
+      }
+      if (message.type === "submitPage") {
+        setSubmitTasks(message.submitTasks ?? []);
+        setSubmitLanguages(message.languages ?? []);
+        if (message.submitTasks && message.submitTasks.length > 0) {
+          setSelectedSubmitTask(message.submitTasks[0].value);
+        }
+        if (message.languages && message.languages.length > 0) {
+          setSelectedSubmitLanguage(message.languages[0].id);
+        }
+        setShowSubmitPanel(true);
+        setStatus("已获取提交页面信息");
+        setIsLoading(false);
+      }
+      if (message.type === "submitResult") {
+        setSubmitResult(message.submitResult ?? null);
+        setIsLoading(false);
+        if (message.submitResult?.success) {
+          setStatus("代码提交成功");
+        } else {
+          setStatus(message.submitResult?.message ?? "提交失败");
+        }
       }
     };
 
@@ -257,6 +315,22 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
             >
               {signed ? "已报名" : "报名比赛"}
             </Button>
+            <Button
+              onClick={() => {
+                if (submitTasks.length === 0) {
+                  handleFetchSubmitPage();
+                } else {
+                  setShowSubmitPanel(!showSubmitPanel);
+                }
+              }}
+              disabled={isLoading}
+              variant={showSubmitPanel ? "secondary" : "primary"}
+              size="sm"
+              className="h-[28px] text-[12px]"
+              title="提交代码"
+            >
+              提交代码
+            </Button>
           </div>
           {Rated && (
             <label className="flex items-center gap-1 text-[12px] select-none cursor-pointer">
@@ -277,6 +351,107 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
           <div className="text-[12px] opacity-70">{status}</div>
         </div>
 
+        {showSubmitPanel && (
+          <div className="border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-textBlockQuote-background)]">
+            <div className="p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-[12px] font-semibold">提交代码到 {contest}</div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => { setShowSubmitPanel(false); setSubmitResult(null); }}
+                  className="h-[24px] text-[11px]"
+                >
+                  关闭
+                </Button>
+              </div>
+
+              {submitTasks.length === 0 ? (
+                <Button onClick={handleFetchSubmitPage} disabled={isLoading} size="sm" className="h-[28px] text-[12px]">
+                  {isLoading ? "获取中..." : "获取提交页面"}
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-semibold">题目</div>
+                    <select
+                      value={selectedSubmitTask}
+                      onChange={(e) => setSelectedSubmitTask(e.target.value)}
+                      className="w-full h-[28px] text-[12px] px-2 rounded border border-[var(--vscode-input-border)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)]"
+                    >
+                      {submitTasks.map((t) => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-semibold">语言</div>
+                    <select
+                      value={selectedSubmitLanguage}
+                      onChange={(e) => setSelectedSubmitLanguage(e.target.value)}
+                      className="w-full h-[28px] text-[12px] px-2 rounded border border-[var(--vscode-input-border)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)]"
+                    >
+                      {submitLanguages.map((l) => (
+                        <option key={l.id} value={l.id}>{l.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-semibold">源代码</div>
+                    <textarea
+                      value={sourceCode}
+                      onChange={(e) => setSourceCode(e.target.value)}
+                      placeholder="在此粘贴或输入代码..."
+                      rows={8}
+                      className="w-full text-[12px] p-2 rounded border border-[var(--vscode-input-border)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)] resize-vertical font-mono"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handleSubmitCode}
+                      disabled={isLoading || !selectedSubmitTask || !selectedSubmitLanguage || !sourceCode.trim()}
+                      size="sm"
+                      className="h-[28px] text-[12px]"
+                    >
+                      {isLoading ? "提交中..." : "提交"}
+                    </Button>
+                    <Button
+                      onClick={handleFetchSubmitPage}
+                      disabled={isLoading}
+                      size="sm"
+                      variant="secondary"
+                      className="h-[28px] text-[12px]"
+                    >
+                      刷新
+                    </Button>
+                  </div>
+
+                  {submitResult && (
+                    <div className={`text-[12px] p-2 rounded ${submitResult.success ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}`}>
+                      <div className="font-semibold mb-1">{submitResult.success ? "提交成功" : "提交失败"}</div>
+                      <div>{submitResult.message}</div>
+                      {submitResult.url && (
+                        <div className="mt-1">
+                          <a
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); vscode.postMessage({ command: "openBrowser", url: submitResult.url }); }}
+                            className="underline"
+                          >
+                            查看提交记录
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {tasks.length > 0 && (
             <Card className="p-3 space-y-2">
@@ -291,7 +466,13 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                       setSelectedTask(task.value);
                       void loadProblem(contest, task.value);
                     }}
+                    className="flex items-center gap-1"
                   >
+                    {task.status === "AC"
+                      ? <span className="text-green-500 font-bold">✓</span>
+                      : task.status
+                        ? <span className="text-red-500 font-bold">✗</span>
+                        : null}
                     {task.label}
                   </Button>
                 ))}
@@ -360,13 +541,35 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                 problem.samples.map((sample: SampleCase) => (
                   <div key={sample.index} className="space-y-2">
                     <div className="text-[12px] font-semibold">Sample {sample.index}</div>
-                    <div className="rounded bg-[var(--vscode-input-background)] p-2">
+                    <div className="rounded bg-[var(--vscode-input-background)] p-2 relative group">
                       <div className="text-[11px] opacity-60 mb-1">Input</div>
                       <pre className="text-[12px] whitespace-pre-wrap break-words">{sample.input}</pre>
+                      <button
+                        onClick={() => copySampleText(`${sample.index}-in`, sample.input)}
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--vscode-toolbar-hoverBackground)]"
+                        title="复制 Input"
+                      >
+                        {copiedSample[`${sample.index}-in`] ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--vscode-editor-foreground)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--vscode-editor-foreground)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        )}
+                      </button>
                     </div>
-                    <div className="rounded bg-[var(--vscode-input-background)] p-2">
+                    <div className="rounded bg-[var(--vscode-input-background)] p-2 relative group">
                       <div className="text-[11px] opacity-60 mb-1">Output</div>
                       <pre className="text-[12px] whitespace-pre-wrap break-words">{sample.output}</pre>
+                      <button
+                        onClick={() => copySampleText(`${sample.index}-out`, sample.output)}
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--vscode-toolbar-hoverBackground)]"
+                        title="复制 Output"
+                      >
+                        {copiedSample[`${sample.index}-out`] ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--vscode-editor-foreground)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--vscode-editor-foreground)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        )}
+                      </button>
                     </div>
                   </div>
                 ))

@@ -1,5 +1,6 @@
 import katex from "katex";
 import { fetchText, CfError, ProxyError, LoginRequiredError } from "./tools/fetch";
+import { SubStatus } from "./tools/types";
 
 export interface SampleCase {
     index: number;
@@ -198,7 +199,7 @@ export async function fetchAtCoderProblem(contest: string, task: string): Promis
     return parseProblemPage(html, url);
 }
 
-export async function fetchAtCoderTasks(contest: string): Promise<Array<{ label: string; value: string; url: string }>> {
+export async function fetchAtCoderTasks(contest: string): Promise<Array<{ label: string; value: string; url: string; status?: string }>> {
     const url = `https://atcoder.jp/contests/${contest}/tasks`;
     const html = await fetchText(url);
     const contestPattern = contest.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

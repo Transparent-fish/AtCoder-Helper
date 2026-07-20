@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="docs/images/cover.png" alt="Cover" width="100%">
+  <a href="https://git.io/typing-svg">
+    <img
+      src="https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1000&width=435&lines=AtCoder+Helper+++++--++++%E4%BD%A0%E7%9A%84+AtCoder+%E5%8A%A9%E6%89%8B"
+      alt="Typing SVG"
+    />
+  </a>
 </p>
-
-<h1 align="center">
-  <img src="assets/logo.svg" width="32" height="32" alt="Logo" align="top">
-  AtCoder Helper
-</h1>
 
 <p align="center">
   <strong>VS Code 插件 — AtCoder 题目浏览 & 报名</strong><br>

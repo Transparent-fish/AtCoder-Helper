@@ -1,6 +1,6 @@
 {
   "name": "vscode-extension",
-  "displayName": "VS Code Extension",
+  "displayName": "AtCoder Helper",
   "version": "0.1.0",
   "publisher": "atcoder-browser",
   "engines": {
