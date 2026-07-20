@@ -195,6 +195,10 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
           setStatus(message.submitResult?.message ?? "提交失败");
         }
       }
+      if (message.type === "statusUpdate") {
+        const statuses = message.statuses ?? {};
+        setTasks(prev => prev.map(t => ({ ...t, status: statuses[t.value] })));
+      }
     };
 
     window.addEventListener("message", handleMessage);

@@ -11,12 +11,12 @@
   ],
   "scripts": {
     "build": "turbo build",
-    "dev": "turbo dev --filter=vscode-extension...",
+    "dev": "turbo dev --filter=atc-helper...",
     "lint": "turbo lint",
     "clean": "turbo clean",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "test": "turbo test",
-    "watch": "turbo watch --filter=vscode-extension..."
+    "watch": "turbo watch --filter=atc-helper..."
   },
   "devDependencies": {
     "@cs-magic/md-toc": "^0.5.2",

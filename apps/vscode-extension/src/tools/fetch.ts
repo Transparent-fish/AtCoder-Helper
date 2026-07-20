@@ -279,7 +279,7 @@ function handleResponse(
 }
 
 export function fetchText(url: string): Promise<string> {
-	const logPrefix = `[fetchText]`;
+	const logPrefix = `[fetchText]`;	
 
 	const savedProxy = saveProxyEnv();
 

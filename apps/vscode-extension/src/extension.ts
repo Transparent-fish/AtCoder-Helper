@@ -218,8 +218,17 @@ export async function handleSubmitCode(
   try {
     const result = await submitCodeWithRedirect(contest, taskScreenName, languageId, sourceCode);
     send({ type: "submitResult", submitResult: result });
-    if (result.success) send({ type: "update", text: "代码提交成功" });
-    else send({ type: "error", text: result.message });
+    if (result.success) {
+      send({ type: "update", text: "代码提交成功" });
+      try {
+        const statusMap = await fetchSubStatus(contest);
+        send({ type: "statusUpdate", statuses: Object.fromEntries(statusMap) });
+      } catch {
+        // 状态刷新失败不阻断
+      }
+    } else {
+      send({ type: "error", text: result.message });
+    }
   } catch (error) {
     if (!handleErrorWithCfAndLogin(error, send)) {
       send({ type: "submitResult", submitResult: { success: false, message: error instanceof Error ? error.message : "提交失败" } });

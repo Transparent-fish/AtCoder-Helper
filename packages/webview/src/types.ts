@@ -47,6 +47,7 @@ export interface WebviewMessage {
   languages?: Array<{ id: string; label: string }>;
   csrfToken?: string;
   submitResult?: SubmitResult;
+  statuses?: Record<string, string>;
 }
 
 export interface VSCodeAPI {
