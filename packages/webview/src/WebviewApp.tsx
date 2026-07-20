@@ -38,6 +38,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   const [selectedSubmitLanguage, setSelectedSubmitLanguage] = React.useState("");
   const [sourceCode, setSourceCode] = React.useState("");
   const [submitResult, setSubmitResult] = React.useState<SubmitResult | null>(null);
+  const [copiedSample, setCopiedSample] = React.useState<Record<string, boolean>>({});
 
   const loadContest = async (nextContest: string) => {
     setIsLoading(true);
@@ -83,6 +84,12 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
     setSourceCode("");
     setStatus("正在获取提交页面...");
     vscode.postMessage({ command: "fetchSubmitPage", contest });
+  };
+
+  const copySampleText = (key: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedSample(prev => ({ ...prev, [key]: true }));
+    setTimeout(() => setCopiedSample(prev => ({ ...prev, [key]: false })), 1500);
   };
 
   const handleSubmitCode = () => {
@@ -534,13 +541,35 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                 problem.samples.map((sample: SampleCase) => (
                   <div key={sample.index} className="space-y-2">
                     <div className="text-[12px] font-semibold">Sample {sample.index}</div>
-                    <div className="rounded bg-[var(--vscode-input-background)] p-2">
+                    <div className="rounded bg-[var(--vscode-input-background)] p-2 relative group">
                       <div className="text-[11px] opacity-60 mb-1">Input</div>
                       <pre className="text-[12px] whitespace-pre-wrap break-words">{sample.input}</pre>
+                      <button
+                        onClick={() => copySampleText(`${sample.index}-in`, sample.input)}
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--vscode-toolbar-hoverBackground)]"
+                        title="复制 Input"
+                      >
+                        {copiedSample[`${sample.index}-in`] ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--vscode-editor-foreground)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--vscode-editor-foreground)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        )}
+                      </button>
                     </div>
-                    <div className="rounded bg-[var(--vscode-input-background)] p-2">
+                    <div className="rounded bg-[var(--vscode-input-background)] p-2 relative group">
                       <div className="text-[11px] opacity-60 mb-1">Output</div>
                       <pre className="text-[12px] whitespace-pre-wrap break-words">{sample.output}</pre>
+                      <button
+                        onClick={() => copySampleText(`${sample.index}-out`, sample.output)}
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--vscode-toolbar-hoverBackground)]"
+                        title="复制 Output"
+                      >
+                        {copiedSample[`${sample.index}-out`] ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--vscode-editor-foreground)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--vscode-editor-foreground)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        )}
+                      </button>
                     </div>
                   </div>
                 ))
