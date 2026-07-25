@@ -34,43 +34,60 @@ VS Code 插件，支持浏览 AtCoder 竞赛题目、LaTeX 数学公式渲染、
 ```
 .
 ├── apps/
-│   └── vscode-extension/       # VS Code 插件主程序
+│   └── vscode-extension/         # 插件主程序
 │       ├── src/
-│       │   ├── extension.ts          # 插件入口，消息路由
-│       │   ├── atcoder.ts            # AtCoder 爬虫 & 题面解析
-│       │   ├── SelectContest.ts      # 报名逻辑（fetchContest / signedUpContest）
-│       │   ├── atcoder.test.ts       # 单元测试
-│       │   └── tools/
-│       │       ├── fetch.ts          # HTTP 请求工具 & 网络错误类
-│       │       └── deepl.ts          # DeepL 翻译 API
-│       ├── webpack.config.js         # Webpack 构建配置
-│       └── package.json              # 扩展清单
+│       │   ├── extension.ts            # 插件入口，消息路由，handler
+│       │   ├── atcoder.ts              # AtCoder 爬虫 & 题面解析
+│       │   ├── tools/
+│       │   │   ├── fetch.ts            # HTTP 客户端，CF/Proxy/Login 错误类
+│       │   │   ├── submit.ts           # 提交代码（fetchSubmitPage / submitCode）
+│       │   │   ├── command.ts          # 消息分发路由
+│       │   │   ├── types.ts            # IncomingMessage / SubStatus
+│       │   │   ├── deepl.ts            # DeepL 翻译
+│       │   │   ├── copy.ts             # Markdown 复制
+│       │   │   └── SignUpContest.ts    # 报名逻辑
+│       │   ├── atcoder.test.ts         # 单元测试
+│       ├── webpack.config.js           # Webpack 构建
+│       ├── package.json                # 扩展清单
+│       ├── img.png                     # 扩展图标
+│       └── LICENSE.txt                 # MIT 许可证
 │
 ├── packages/
 │   ├── core/                   # @template/core — 核心工具
 │   ├── ui/                     # @template/ui — React 组件库
-│   └── webview/                # @template/webview — WebView 应用
+│   └── webview/                # @template/webview — WebView 前端
+│       └── src/
+│           ├── WebviewApp.tsx          # 主应用（题目/提交/状态/复制）
+│           ├── VSCodeProvider.tsx      # VS Code API 上下文
+│           ├── types.ts                # WebviewMessage / SubmitResult
+│           ├── components/
+│           │   └── HtmlContent.tsx     # HTML 渲染 & 翻译块
+│           └── styles.css              # Tailwind + KaTeX
 │
 ├── docs/
 │   ├── images/
-│   └── Standard.md             # 编码规范文档
+│   │   └── img.png              # 扩展图标源文件
+│   └── Standard.md              # 编码规范
 │
 ├── .github/workflows/
-│   └── pr-review.yml           # PR 自动审查流程
+│   └── pr-review.yml            # PR CI：lint + build + test
 │
-├── pnpm-workspace.yaml         # 工作区配置
-└── turbo.json                  # Turborepo 配置
+├── release/
+│   └── extension.vsix           # 打包输出
+│
+├── pnpm-workspace.yaml          # 工作区配置
+└── turbo.json                   # Turborepo 配置
 ```
 
 ### 目录说明
 
 | 目录 | 职责 |
 |------|------|
-| `apps/vscode-extension` | 插件入口，消息处理，AtCoder 爬虫，HTTP 工具，报名逻辑 |
-| `packages/core` | 核心业务逻辑（MessageBus, StateManager） |
+| `apps/vscode-extension` | 扩展入口、消息路由、AtCoder 通信、提交、报名 |
+| `packages/core` | 核心业务逻辑 |
 | `packages/ui` | React 组件库（Button, Card, Input, Spinner） |
 | `packages/webview` | WebView 前端应用（React + Tailwind + KaTeX） |
-| `docs/Standard.md` | 编码规范（命名、行数限制、导入顺序等） |
+| `docs/Standard.md` | 编码规范 |
 
 ## 快速开始
 
