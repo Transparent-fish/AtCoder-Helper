@@ -10,19 +10,16 @@ import {
   handleRegistration,
   handleFetchSubmitPage,
   handleSubmitCode,
+  handleFetchSubHistory,
 } from "../extension";
 
 const loadCommands = new Set(["loadContest", "loadProblem", "openBrowser"]);
 const deeplCommands = new Set(["translate", "setApiKey"]);
 const cookieCommands = new Set(["getCookie", "setCookie"]);
 const problemCommands = new Set(["registerContest", "copyMarkdown", "alert"]);
-const submitCommands = new Set(["fetchSubmitPage", "submitCode"]);
+const submitCommands = new Set(["fetchSubmitPage", "submitCode", "fetchSubmissionHistory", "fetchSubmissionDetail"]);
 
-export async function runCommand(
-  message: IncomingMessage,
-  context: vscode.ExtensionContext,
-  sendToWebview: (payload: Record<string, unknown>) => void,
-) {
+export async function runCommand(message: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,) {
   if (loadCommands.has(message.command!)) await runLoadCommand(message, sendToWebview);
   else if (deeplCommands.has(message.command!)) await runDeepL(message, context, sendToWebview);
   else if (cookieCommands.has(message.command!)) await runCookie(message, context, sendToWebview);
@@ -41,16 +38,16 @@ async function runSubmit(command: IncomingMessage, context: vscode.ExtensionCont
       if (!command.contest) return false;
       await handleSubmitCode(command.contest, command.taskScreenName, command.languageId, command.sourceCode, sendToWebview);
       return true;
+    case "fetchSubmissionHistory":
+      if (!command.contest) return false;
+      await handleFetchSubHistory(command.contest, sendToWebview);
+      return true;
     default:
       return false;
   }
 }
 
-async function runProblem(
-  command: IncomingMessage,
-  context: vscode.ExtensionContext,
-  sendToWebview: (payload: Record<string, unknown>) => void,
-): Promise<boolean> {
+async function runProblem(command: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,): Promise<boolean> {
   switch (command.command) {
     case "registerContest":
       if (!command.contest) return false;
@@ -71,11 +68,7 @@ async function runProblem(
   }
 }
 
-async function runCookie(
-  command: IncomingMessage,
-  context: vscode.ExtensionContext,
-  sendToWebview: (payload: Record<string, unknown>) => void,
-): Promise<boolean> {
+async function runCookie(command: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,): Promise<boolean> {
   switch (command.command) {
     case "getCookie":
       await handleGetCookie(context, sendToWebview);
@@ -88,11 +81,7 @@ async function runCookie(
   }
 }
 
-async function runDeepL(
-  command: IncomingMessage,
-  context: vscode.ExtensionContext,
-  sendToWebview: (payload: Record<string, unknown>) => void,
-): Promise<boolean> {
+async function runDeepL(command: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,): Promise<boolean> {
   switch (command.command) {
     case "translate":
       await handleTranslate(command.payload, command.targetLang, context, sendToWebview);
@@ -108,10 +97,7 @@ async function runDeepL(
   }
 }
 
-async function runLoadCommand(
-  command: IncomingMessage,
-  sendToWebview: (payload: Record<string, unknown>) => void,
-): Promise<boolean> {
+async function runLoadCommand(command: IncomingMessage, sendToWebview: (payload: Record<string, unknown>) => void,): Promise<boolean> {
   switch (command.command) {
     case "loadContest":
       if (!command.contest) return false;

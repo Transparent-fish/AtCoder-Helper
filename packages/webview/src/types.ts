@@ -21,9 +21,19 @@ export interface SubmitResult {
   url?: string;
 }
 
+export interface SubmissionRecord {
+  id: string;
+  time: string;
+  task: string;
+  taskScreenName: string;
+  language: string;
+  score: string;
+  status: string;
+}
+
 export interface WebviewMessage {
   type?: string;
-  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest' | 'copyMarkdown' | 'fetchSubmitPage' | 'submitCode';
+  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest' | 'copyMarkdown' | 'fetchSubmitPage' | 'submitCode' | 'fetchSubmissionHistory';
   statusMessage?: string;
   text?: string;
   contest?: string;
@@ -48,6 +58,7 @@ export interface WebviewMessage {
   csrfToken?: string;
   submitResult?: SubmitResult;
   statuses?: Record<string, string>;
+  submissions?: SubmissionRecord[];
 }
 
 export interface VSCodeAPI {

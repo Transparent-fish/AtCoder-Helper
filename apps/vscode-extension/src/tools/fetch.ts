@@ -4,6 +4,7 @@ import * as stream from "stream";
 import * as zlib from "zlib";
 import * as net from "net";
 import * as tls from "tls";
+import { SubRecord } from "./types"
 
 
 export class CfError extends Error {
@@ -279,7 +280,7 @@ function handleResponse(
 }
 
 export function fetchText(url: string): Promise<string> {
-	const logPrefix = `[fetchText]`;	
+	const logPrefix = `[fetchText]`;
 
 	const savedProxy = saveProxyEnv();
 
@@ -369,3 +370,39 @@ export async function fetchSubStatus(contest: string): Promise<Map<string, strin
 	}
 	return now;
 }
+
+export async function fetchSubmitHistory(contest: string): Promise<SubRecord[]> {
+	const html = await fetchText(`https://atcoder.jp/contests/${contest}/submissions/me`);
+	const records: SubRecord[] = [];
+	const reg = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+	let rowMatch: RegExpExecArray | null;
+	for (; (rowMatch = reg.exec(html)) !== null;) {
+		const rowHtml = rowMatch[1];
+		const timeMatch = rowHtml.match(/<td[^>]*class="text-center"[^>]*>([\s\S]*?)<\/td>/i);
+		if (!timeMatch) continue;
+		const time = timeMatch[1].trim().replace(/<[^>]+>/g, "");
+
+		const taskLinkMatch = rowHtml.match(/href="\/contests\/[^/]+\/tasks\/([^"#?]+)"[^>]*>([^<]+)</i);
+		if (!taskLinkMatch) continue;
+		const taskScreenName = taskLinkMatch[1];
+		const task = taskLinkMatch[2].trim();
+
+		const langMatch = rowHtml.match(/<td[^>]*class="text-center"[^>]*>[\s\S]*?<\/td>\s*<td[^>]*>([^<]*)<\/td>/i);
+		const language = langMatch ? langMatch[1].trim() : "";
+
+		const scoreMatch = rowHtml.match(/<td[^>]*class="text-right"[^>]*>\s*(\d+)\s*<\/td>/i);
+		const score = scoreMatch ? scoreMatch[1] : "0";
+
+		const statusMatch = rowHtml.match(/<span[^>]*class=(["'])[^"']*\blabel\b[^"']*\1[^>]*>\s*([^<]+)\s*<\/span>/i);
+		if (!statusMatch) continue;
+		const status = statusMatch[2].trim();
+
+		const detailMatch = rowHtml.match(/<a[^>]*href="\/contests\/[^/]+\/submissions\/(\d+)"[^>]*>/i);
+		if (!detailMatch) continue;
+		const id = detailMatch[1];
+
+		records.push({ id, time, task, taskScreenName, language, score, status });
+	}
+	return records;
+}
+

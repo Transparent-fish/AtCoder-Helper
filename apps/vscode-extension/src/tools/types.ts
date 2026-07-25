@@ -15,9 +15,20 @@ export interface IncomingMessage {
 	problem?: AtCoderProblem;
 }
 
+export interface SubRecord {
+	id: string;
+	time: string;
+	task: string;
+	taskScreenName: string; // 题目标识
+	language: string;     // 编程语言
+	score: string;        // 分数
+	status: string;
+}
+
 export interface SubStatus {
 	label: string;
 	value: string;
 	url: string;
 	status?: string;
 }
+

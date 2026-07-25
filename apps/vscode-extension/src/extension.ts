@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { fetchAtCoderProblem, fetchAtCoderTasks } from "./atcoder";
-import { CfError, ProxyError, LoginRequiredError, setSessionCookie, fetchSubStatus } from "./tools/fetch";
+import { CfError, ProxyError, LoginRequiredError, setSessionCookie, fetchSubStatus, fetchSubmitHistory } from "./tools/fetch";
 import { fetchContest, signedUpContest } from "./tools/SignUpContest";
 import { translateTextRaw } from "./tools/deepl";
 import { runCommand } from "./tools/command";
@@ -236,6 +236,18 @@ export async function handleSubmitCode(
   } catch (error) {
     if (!handleErrorWithCfAndLogin(error, send)) {
       send({ type: "submitResult", submitResult: { success: false, message: error instanceof Error ? error.message : "提交失败" } });
+    }
+  }
+}
+
+export async function handleFetchSubHistory(contest: string, send: (payload: Record<string, unknown>) => void) {
+  send({ type: "loading", text: `正在获取 ${contest} 提交记录...` });
+  try {
+    const submissions = await fetchSubmitHistory(contest);
+    send({ type: "submissionHistory", submissions });
+  } catch (error) {
+    if (!handleErrorWithCfAndLogin(error, send)) {
+      send({ type: "error", text: error instanceof Error ? error.message : "获取提交记录失败" });
     }
   }
 }

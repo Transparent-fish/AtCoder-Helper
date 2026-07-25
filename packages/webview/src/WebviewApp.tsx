@@ -39,6 +39,9 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   const [sourceCode, setSourceCode] = React.useState("");
   const [submitResult, setSubmitResult] = React.useState<SubmitResult | null>(null);
   const [copiedSample, setCopiedSample] = React.useState<Record<string, boolean>>({});
+  const [showSubmissionHistory, setShowSubmissionHistory] = React.useState(false);
+  const [submissionHistory, setSubmissionHistory] = React.useState<Array<{ id: string; time: string; task: string; taskScreenName: string; language: string; score: string; status: string }>>([]);
+  const [loadingHistory, setLoadingHistory] = React.useState(false);
 
   const loadContest = async (nextContest: string) => {
     setIsLoading(true);
@@ -90,6 +93,12 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
     navigator.clipboard.writeText(text);
     setCopiedSample(prev => ({ ...prev, [key]: true }));
     setTimeout(() => setCopiedSample(prev => ({ ...prev, [key]: false })), 1500);
+  };
+
+  const handleFetchSubmissionHistory = () => {
+    setLoadingHistory(true);
+    setStatus("正在获取提交记录...");
+    vscode.postMessage({ command: "fetchSubmissionHistory", contest } as unknown as WebviewMessage);
   };
 
   const handleSubmitCode = () => {
@@ -198,6 +207,13 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
       if (message.type === "statusUpdate") {
         const statuses = message.statuses ?? {};
         setTasks(prev => prev.map(t => ({ ...t, status: statuses[t.value] })));
+      }
+      if (message.type === "submissionHistory") {
+        const m = message as any;
+        setSubmissionHistory(m.submissions ?? []);
+        setLoadingHistory(false);
+        setStatus(`已获取 ${(m.submissions ?? []).length} 条提交记录`);
+        setShowSubmissionHistory(true);
       }
     };
 
@@ -335,6 +351,22 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
             >
               提交代码
             </Button>
+            <Button
+              onClick={() => {
+                if (submissionHistory.length === 0) {
+                  handleFetchSubmissionHistory();
+                } else {
+                  setShowSubmissionHistory(!showSubmissionHistory);
+                }
+              }}
+              disabled={isLoading}
+              variant={showSubmissionHistory ? "secondary" : "primary"}
+              size="sm"
+              className="h-[28px] text-[12px]"
+              title="提交记录"
+            >
+              提交记录
+            </Button>
           </div>
           {Rated && (
             <label className="flex items-center gap-1 text-[12px] select-none cursor-pointer">
@@ -456,6 +488,66 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
           </div>
         )}
 
+        {showSubmissionHistory && (
+          <div className="border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-textBlockQuote-background)]">
+            <div className="p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-[12px] font-semibold">{contest} 提交记录</div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleFetchSubmissionHistory}
+                    disabled={loadingHistory}
+                    className="h-[24px] text-[11px]"
+                  >
+                    {loadingHistory ? "刷新中..." : "刷新"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => { setShowSubmissionHistory(false); }}
+                    className="h-[24px] text-[11px]"
+                  >
+                    关闭
+                  </Button>
+                </div>
+              </div>
+
+              {submissionHistory.length === 0 ? (
+                <div className="text-[12px] opacity-60">
+                  {loadingHistory ? "正在获取提交记录..." : "暂无提交记录"}
+                </div>
+              ) : (
+                <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                  {submissionHistory.map((s) => (
+                    <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 text-[12px] border border-[var(--vscode-panel-border)] rounded hover:bg-[var(--vscode-list-hoverBackground)]">
+                      <span className="text-[11px] opacity-60 w-[120px] flex-shrink-0">{s.time}</span>
+                      <span className="flex-1 truncate">{s.task}</span>
+                      <span className={`text-[10px] px-1 rounded font-bold ${
+                        s.status === "AC" ? "text-green-500 bg-green-500/10" :
+                        s.status === "WA" ? "text-red-500 bg-red-500/10" :
+                        s.status === "TLE" ? "text-cyan-500 bg-cyan-500/10" :
+                        s.status === "MLE" ? "text-yellow-500 bg-yellow-500/10" :
+                        s.status === "RE" ? "text-purple-500 bg-purple-500/10" :
+                        s.status === "CE" ? "text-gray-400 bg-gray-400/10" :
+                        "text-gray-400 bg-gray-400/10"
+                      }`}>{s.status}</span>
+                      <span className="text-[11px] opacity-60 w-[50px] text-right">{s.score}</span>
+                      <a
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); vscode.postMessage({ command: "openBrowser", url: `https://atcoder.jp/contests/${contest}/submissions/${s.id}` }); }}
+                        className="text-[11px] underline opacity-60 hover:opacity-100 flex-shrink-0"
+                      >
+                        查看
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {tasks.length > 0 && (
             <Card className="p-3 space-y-2">
@@ -472,11 +564,18 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                     }}
                     className="flex items-center gap-1"
                   >
-                    {task.status === "AC"
-                      ? <span className="text-green-500 font-bold">✓</span>
-                      : task.status
-                        ? <span className="text-red-500 font-bold">✗</span>
-                        : null}
+                    {task.status && (
+                      <span className={`text-[10px] px-1 rounded font-bold ${
+                        task.status === "AC" ? "text-green-500 bg-green-500/10" :
+                        task.status === "WA" ? "text-red-500 bg-red-500/10" :
+                        task.status === "TLE" ? "text-cyan-500 bg-cyan-500/10" :
+                        task.status === "MLE" ? "text-yellow-500 bg-yellow-500/10" :
+                        task.status === "RE" ? "text-purple-500 bg-purple-500/10" :
+                        task.status === "CE" ? "text-gray-400 bg-gray-400/10" :
+                        task.status === "WJ" || task.status === "WR" ? "text-yellow-500 bg-yellow-500/10" :
+                        "text-gray-400 bg-gray-400/10"
+                      }`}>{task.status}</span>
+                    )}
                     {task.label}
                   </Button>
                 ))}
