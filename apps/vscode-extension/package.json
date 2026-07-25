@@ -1,8 +1,14 @@
 {
-  "name": "vscode-extension",
-  "displayName": "AtCoder Helper",
-  "version": "0.1.0",
-  "publisher": "atcoder-browser",
+  "name": "atc-helper",
+  "displayName": "AtCoder Helper neo",
+  "version": "1.0.2",
+  "description": "AtCoder 助手",
+  "publisher": "Hoshino",
+  "icon": "img.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Transparent-fish/AtCoder-Helper.git"
+  },
   "engines": {
     "vscode": "^1.80.0"
   },

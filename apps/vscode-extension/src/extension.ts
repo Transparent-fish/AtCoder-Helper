@@ -18,6 +18,8 @@ const log = {
   },
 };
 
+const sleep = (ms: number): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, ms));
+
 function getWebviewContent(webviewJsSrc: vscode.Uri): string {
   return `<!DOCTYPE html>
   <html lang="en">
@@ -218,13 +220,43 @@ export async function handleSubmitCode(
   try {
     const result = await submitCodeWithRedirect(contest, taskScreenName, languageId, sourceCode);
     send({ type: "submitResult", submitResult: result });
-    if (result.success) send({ type: "update", text: "代码提交成功" });
-    else send({ type: "error", text: result.message });
+    if (result.success) {
+      send({ type: "update", text: "代码提交成功，正在获取评测结果..." });
+      try {
+        await pullSubmitStatu(contest, taskScreenName!, send);
+      } catch {
+        try {
+          const statusMap = await fetchSubStatus(contest);
+          send({ type: "statusUpdate", statuses: Object.fromEntries(statusMap) });
+        } catch {
+          // 失败不阻断
+        }
+      }
+    } else send({ type: "error", text: result.message });
   } catch (error) {
     if (!handleErrorWithCfAndLogin(error, send)) {
       send({ type: "submitResult", submitResult: { success: false, message: error instanceof Error ? error.message : "提交失败" } });
     }
   }
+}
+
+async function pullSubmitStatu(contest: string, taskName: string, send: (payload: Record<string, unknown>) => void,): Promise<void> {
+  const maxSetp = 15;
+  for (let i = 1; i <= maxSetp; i++) {
+    await sleep(2000);
+    try {
+      const statusMap = await fetchSubStatus(contest);
+      send({ type: "statusUpdate", statuses: Object.fromEntries(statusMap) });
+      const status = statusMap.get(taskName);
+      if (status && status !== "WJ") {
+        send({ type: "update", text: `评测结果: ${status}` });
+        return;
+      }
+    } catch {
+      //单次轮询失败,直接下一次
+    }
+  }
+  send({ type: "update", text: "评测超时，请稍后手动刷新查看结果" });
 }
 
 function registerSetDeeplApiKey(context: vscode.ExtensionContext) {
