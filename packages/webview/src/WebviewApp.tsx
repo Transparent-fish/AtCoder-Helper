@@ -22,7 +22,9 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   const [isLoading, setIsLoading] = React.useState(false);
   const [cfUrl, setCfUrl] = React.useState<string | null>(null);
   const [translated, setTranslated] = React.useState<Record<string, string> | null>(null);
+  const [translatedCache, setTranslatedCache] = React.useState<Record<string, Record<string, string>>>({});
   const [translating, setTranslating] = React.useState(false);
+  const selectedTaskRef = React.useRef(selectedTask);
   const [cookieInput, setCookieInput] = React.useState("");
   const [hasCookie, setHasCookie] = React.useState(false);
   const [showSettings, setShowSettings] = React.useState(false);
@@ -52,7 +54,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   const loadProblem = async (nextContest: string, task: string) => {
     setIsLoading(true);
     setStatus(`正在抓取 ${nextContest}/${task} 的题面...`);
-    setTranslated(null);
+    setTranslated(translatedCache[task] ?? null);
     vscode.postMessage({ command: "loadProblem", contest: nextContest, task });
   };
 
@@ -123,6 +125,10 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   }, []);
 
   React.useEffect(() => {
+    selectedTaskRef.current = selectedTask;
+  }, [selectedTask]);
+
+  React.useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data as WebviewMessage;
       if (message.type === "tasks") {
@@ -161,6 +167,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
         setStatus("需要登录 AtCoder 才能查看。请在浏览器中登录，然后将 Cookie 粘贴到设置中");
       }
       if (message.type === "translation") {
+        setTranslatedCache(prev => ({ ...prev, [selectedTaskRef.current]: message.translated ?? {} }));
         setTranslated(message.translated ?? null);
         setTranslating(false);
         setStatus("翻译完成");
