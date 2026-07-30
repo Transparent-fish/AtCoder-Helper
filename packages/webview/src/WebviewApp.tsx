@@ -24,6 +24,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   const [translated, setTranslated] = React.useState<Record<string, string> | null>(null);
   const [translatedCache, setTranslatedCache] = React.useState<Record<string, Record<string, string>>>({});
   const [translating, setTranslating] = React.useState(false);
+  const [translationMode, setTranslationMode] = React.useState<"api" | "free">("free");
   const selectedTaskRef = React.useRef(selectedTask);
   const [cookieInput, setCookieInput] = React.useState("");
   const [hasCookie, setHasCookie] = React.useState(false);
@@ -79,7 +80,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
     if (problem.constraints) texts["约束"] = problem.constraints;
     if (problem.inputFormat) texts["输入格式"] = problem.inputFormat;
     if (problem.outputFormat) texts["输出格式"] = problem.outputFormat;
-    vscode.postMessage({ command: "translate", payload: texts, targetLang: "ZH" });
+    vscode.postMessage({ command: "translate", payload: texts, targetLang: "ZH", translationMode } as WebviewMessage);
   };
 
   const handleFetchSubmitPage = () => {
@@ -597,10 +598,19 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                   <div className="text-[13px] font-semibold">{problem.title}</div>
                   <div className="text-[12px] opacity-60">{problem.url}</div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <Button onClick={doTranslate} disabled={translating} size="sm" className="h-[26px] text-[11px]">
                     {translating ? "翻译中..." : "翻译"}
                   </Button>
+                  <select
+                    value={translationMode}
+                    onChange={(e) => setTranslationMode(e.target.value as "api" | "free")}
+                    className="h-[26px] text-[11px] px-1 rounded border border-[var(--vscode-input-border)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none"
+                    title="翻译模式"
+                  >
+                    <option value="free">免费</option>
+                    <option value="api">API</option>
+                  </select>
                   <Button onClick={doCopyMarkdown} size="sm" variant="secondary" className="h-[26px] text-[11px]">
                     复制 Markdown
                   </Button>

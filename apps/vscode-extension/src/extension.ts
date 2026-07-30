@@ -3,7 +3,7 @@ import * as path from "path";
 import { fetchAtCoderProblem, fetchAtCoderTasks } from "./atcoder";
 import { CfError, ProxyError, LoginRequiredError, setSessionCookie, fetchSubStatus, fetchSubmitHistory } from "./tools/fetch";
 import { fetchContest, signedUpContest } from "./tools/SignUpContest";
-import { translateTextRaw } from "./tools/deepl";
+import { translateTextRaw, translateTextFree } from "./tools/deepl";
 import { runCommand } from "./tools/command";
 import { fetchSubmitPage, submitCodeWithRedirect } from "./tools/submit";
 import { IncomingMessage } from "./tools/types";
@@ -110,23 +110,33 @@ export async function handleTranslate(
   targetLang: string | undefined,
   context: vscode.ExtensionContext,
   send: (payload: Record<string, unknown>) => void,
+  translationMode?: "api" | "free",
 ) {
   const lang = targetLang ?? "ZH";
   const texts = payload ?? {};
   const translated: Record<string, string> = {};
   try {
-    const apiKey = await context.secrets.get("deeplApiKey");
-    if (!apiKey) {
-      const set = "设置 API Key";
-      const choice = await vscode.window.showErrorMessage("请先设置 DeepL API Key", set);
-      if (choice === set) vscode.commands.executeCommand("extension.setDeeplApiKey");
-      send({ type: "error", text: "未设置 DeepL API Key" });
-      return;
-    }
-    for (const [key, value] of Object.entries(texts)) {
-      if (typeof value === "string" && value.trim()) {
-        send({ type: "loading", text: `正在翻译 ${key}...` });
-        translated[key] = await translateTextRaw(value, lang, apiKey);
+    if (translationMode === "free") {
+      for (const [key, value] of Object.entries(texts)) {
+        if (typeof value === "string" && value.trim()) {
+          send({ type: "loading", text: `正在翻译 ${key}...` });
+          translated[key] = await translateTextFree(value, lang);
+        }
+      }
+    } else {
+      const apiKey = await context.secrets.get("deeplApiKey");
+      if (!apiKey) {
+        const set = "设置 API Key";
+        const choice = await vscode.window.showErrorMessage("请先设置 DeepL API Key", set);
+        if (choice === set) vscode.commands.executeCommand("extension.setDeeplApiKey");
+        send({ type: "error", text: "未设置 DeepL API Key" });
+        return;
+      }
+      for (const [key, value] of Object.entries(texts)) {
+        if (typeof value === "string" && value.trim()) {
+          send({ type: "loading", text: `正在翻译 ${key}...` });
+          translated[key] = await translateTextRaw(value, lang, apiKey);
+        }
       }
     }
     send({ type: "translation", translated });
