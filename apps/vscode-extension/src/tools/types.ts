@@ -10,6 +10,7 @@ export interface IncomingMessage {
 	url?: string;
 	payload?: Record<string, string>;
 	targetLang?: string;
+	translationMode?: "api" | "free";
 	text?: string;
 	rated?: boolean;
 	problem?: AtCoderProblem;

@@ -44,6 +44,7 @@ export interface WebviewMessage {
   payload?: Record<string, string>;
   url?: string;
   targetLang?: string;
+  translationMode?: "api" | "free";
   translated?: Record<string, string>;
   tasks?: Array<{ label: string; value: string; url: string; status?: string }>;
   problem?: ContestProblem;

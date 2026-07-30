@@ -84,7 +84,7 @@ async function runCookie(command: IncomingMessage, context: vscode.ExtensionCont
 async function runDeepL(command: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,): Promise<boolean> {
   switch (command.command) {
     case "translate":
-      await handleTranslate(command.payload, command.targetLang, context, sendToWebview);
+      await handleTranslate(command.payload, command.targetLang, context, sendToWebview, command.translationMode);
       return true;
     case "setApiKey":
       if (command.text?.trim()) {
