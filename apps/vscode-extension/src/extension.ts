@@ -264,13 +264,14 @@ export async function handleFetchSubHistory(contest: string, send: (payload: Rec
 
 async function pullSubmitStatu(contest: string, taskName: string, send: (payload: Record<string, unknown>) => void,): Promise<void> {
   const maxSetp = 15;
+  const judgeStatus = new Set(["AC", "WA", "TLE", "MLE", "RE", "CE", "OLE"]);
   for (let i = 1; i <= maxSetp; i++) {
     await sleep(2000);
     try {
       const statusMap = await fetchSubStatus(contest);
       send({ type: "statusUpdate", statuses: Object.fromEntries(statusMap) });
       const status = statusMap.get(taskName);
-      if (status && status !== "WJ") {
+      if (status && judgeStatus.has(status)) {
         send({ type: "update", text: `评测结果: ${status}` });
         return;
       }
