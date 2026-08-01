@@ -219,6 +219,11 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
       if (message.type === "submissionHistory") {
         const m = message as any;
         setSubmissionHistory(m.submissions ?? []);
+        const latest: Record<string, string> = {};
+        for (const s of (m.submissions ?? [])) {
+          if (!(s.taskScreenName in latest)) latest[s.taskScreenName] = s.status;
+        }
+        setTasks(prev => prev.map(t => ({ ...t, status: latest[t.value] })));
         setLoadingHistory(false);
         setStatus(`已获取 ${(m.submissions ?? []).length} 条提交记录`);
         setShowSubmissionHistory(true);
