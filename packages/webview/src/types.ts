@@ -13,6 +13,7 @@ export interface ContestProblem {
   inputFormat: string;
   outputFormat: string;
   samples: SampleCase[];
+  sampleUrl?: string;
 }
 
 export interface SubmitResult {

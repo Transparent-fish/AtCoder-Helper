@@ -33,6 +33,9 @@ export async function translateTextFree(text: string, lang: string): Promise<str
     }, id);
 
     return new Promise((resolve, reject) => {
+        let settled = false;
+        const settle = (fn: () => void) => { if (!settled) { settled = true; fn(); } };
+
         const req = https.request(
             {
                 hostname: "www2.deepl.com",
@@ -40,29 +43,41 @@ export async function translateTextFree(text: string, lang: string): Promise<str
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "Content-Length": Buffer.byteLength(postData),
                     "Host": "www2.deepl.com",
                     "Origin": "https://www.deepl.com",
                     "Referer": "https://www.deepl.com/",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
                 },
             },
             (res) => {
                 let data = "";
                 res.on("data", (chunk) => (data += chunk));
                 res.on("end", () => {
-                    try {
-                        const json = JSON.parse(data);
-                        if (json?.result?.texts?.[0]?.text) {
-                            resolve(json.result.texts[0].text);
-                        } else {
+                    settle(() => {
+                        if (res.statusCode && res.statusCode >= 400) {
+                            reject(new Error(res.statusCode === 429 ? "翻译请求过于频繁，请稍后再试" : `翻译接口错误 (${res.statusCode})`));
+                            return;
+                        }
+                        try {
+                            const json = JSON.parse(data);
+                            if (json?.result?.texts?.[0]?.text) {
+                                resolve(json.result.texts[0].text);
+                            } else {
+                                reject(new Error("翻译接口返回异常"));
+                            }
+                        } catch {
                             reject(new Error("翻译接口返回异常"));
                         }
-                    } catch {
-                        reject(new Error("翻译接口返回异常"));
-                    }
+                    });
                 });
             }
         );
-        req.on("error", () => reject(new Error("翻译请求失败")));
+
+        req.setTimeout(20000, () => req.destroy(new Error("翻译请求超时")));
+        req.on("error", (err: Error) =>
+            settle(() => reject(new Error(err.message === "翻译请求超时" ? "翻译请求超时" : `翻译请求失败: ${err.message}`)))
+        );
         req.write(postData);
         req.end();
     });

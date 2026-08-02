@@ -698,6 +698,17 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                     </div>
                   </div>
                 ))
+              ) : problem.sampleUrl ? (
+                <div className="flex flex-col items-start gap-2">
+                  <div className="text-[12px] opacity-60">该题目没有内嵌样例，样例在外部链接中。</div>
+                  <Button
+                    onClick={() => vscode.postMessage({ command: "openBrowser", url: problem.sampleUrl! })}
+                    size="sm"
+                    className="h-[26px] text-[11px]"
+                  >
+                    查看样例
+                  </Button>
+                </div>
               ) : (
                 <div className="text-[12px] opacity-60">当前题目没有找到样例。</div>
               )}
