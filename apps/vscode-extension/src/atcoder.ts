@@ -17,6 +17,7 @@ export interface AtCoderProblem {
     inputFormat: string;
     outputFormat: string;
     samples: SampleCase[];
+    sampleUrl?: string;
 }
 
 function decodeEntities(text: string): string {
@@ -129,9 +130,22 @@ function extractSection(html: string, headings: string[]): string {
 }
 
 function getLangContent(html: string, lang: "en" | "ja"): string {
-    const pattern = `<span[^>]*\\sclass="[^"]*\\blang-${lang}\\b[^"]*"[^>]*>([\\s\\S]*?)<\\/span>`;
-    const match = html.match(new RegExp(pattern, "i"));
-    return match ? match[1] : html;
+    const startMatch = html.match(
+        new RegExp(`<span[^>]*\\sclass="[^"]*\\blang-${lang}\\b[^"]*"[^>]*>`, "i")
+    );
+    if (!startMatch || startMatch.index === undefined) return html;
+    const start = startMatch.index + startMatch[0].length;
+    const now = /<\/?span\b[^>]*>/gi;
+    let dep = 1;
+    now.lastIndex = start;
+    let m: RegExpExecArray | null;
+    for (; (m = now.exec(html)) !== null;) {
+        if (m[0].startsWith("</")) {
+            dep--;
+            if (dep === 0) return html.slice(start, m.index);
+        } else dep++;
+    }
+    return html.slice(start);
 }
 
 export function parseProblemPage(html: string, url: string): AtCoderProblem {
@@ -148,6 +162,9 @@ export function parseProblemPage(html: string, url: string): AtCoderProblem {
     const constraints = extractSection(contentSrc, ["Constraints", "制約"]);
     const inputFormat = extractSection(contentSrc, ["Input", "入力"]);
     const outputFormat = extractSection(contentSrc, ["Output", "出力"]);
+
+    const sampleLinkMatch = contentSrc.match(/href="([^"]*output=sample[^"]*)"/i);
+    const sampleUrl = sampleLinkMatch ? sampleLinkMatch[1] : undefined;
 
     const samples: SampleCase[] = [];
     const sampleBlocks = Array.from(html.matchAll(/<h3[^>]*>\s*Sample\s*(Input|Output)\s*(\d+)\s*<\/h3>/gi));
@@ -190,6 +207,7 @@ export function parseProblemPage(html: string, url: string): AtCoderProblem {
         inputFormat,
         outputFormat,
         samples,
+        sampleUrl,
     };
 }
 
