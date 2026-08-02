@@ -14,7 +14,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   title = "VSCode Extension",
 }) => {
   const vscode = useVSCode();
-  const [contest, setContest] = React.useState("abc345");
+  const [contest, setContest] = React.useState("");
   const [tasks, setTasks] = React.useState<Array<{ label: string; value: string; url: string; status?: string }>>([]);
   const [selectedTask, setSelectedTask] = React.useState<string>("");
   const [problem, setProblem] = React.useState<ContestProblem | null>(null);
@@ -273,7 +273,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               <div className="font-medium mt-1">获取步骤：</div>
               <ol className="list-decimal pl-4 space-y-0.5">
                 <li>在浏览器中打开 <span className="underline cursor-pointer" onClick={() => vscode.postMessage({ command: "openBrowser", url: "https://atcoder.jp/login" })}>https://atcoder.jp/login</span> 并登录</li>
-                <li>按 <kbd className="px-1 rounded border border-[var(--vscode-input-border)]">F12</kbd> 打开开发者工具</li>
+                <li>按 <kbd className="px-1 rounded border border-[var(--vscode-input-border,#6e7681)]">F12</kbd> 打开开发者工具</li>
                 <li>切换到 <b>Application</b>（Chrome）或 <b>存储</b>（Edge）标签页</li>
                 <li>左侧找到 <b>Cookies</b> → <b>https://atcoder.jp</b></li>
                 <li>找到名为 <code className="bg-[var(--vscode-textBlockQuote-background)] px-1 rounded">REVEL_SESSION</code> 的行，双击 <b>Value</b> 列全选复制</li>
@@ -286,7 +286,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                 value={cookieInput}
                 onChange={(e) => setCookieInput(e.target.value)}
                 placeholder={hasCookie ? "已保存 Cookie，输入新值可覆盖" : "粘贴 REVEL_SESSION 的 Value"}
-                className="flex-1 h-[28px] text-[12px] px-2 rounded border border-[var(--vscode-input-border)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)]"
+                className="flex-1 h-[28px] text-[12px] px-2 rounded border border-[var(--vscode-input-border,#6e7681)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)]"
               />
               <Button
                 onClick={() => {
@@ -331,8 +331,8 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               value={contest}
               onChange={(e) => setContest(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && void loadContest(contest)}
-              placeholder="输入比赛代号，如 abc345"
-              className="flex-1 h-[28px] text-[12px]"
+              placeholder="输入比赛代码，如 abc345"
+              className="flex-1 h-[28px] text-[12px] bg-white! text-[#000000]! placeholder:text-[#000000]! placeholder:opacity-100! shadow-none!"
               disabled={isLoading}
             />
             <Button onClick={() => void loadContest(contest)} disabled={isLoading} className="h-[28px] text-[12px]">
@@ -426,7 +426,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                     <select
                       value={selectedSubmitTask}
                       onChange={(e) => setSelectedSubmitTask(e.target.value)}
-                      className="w-full h-[28px] text-[12px] px-2 rounded border border-[var(--vscode-input-border)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)]"
+                      className="w-full h-[28px] text-[12px] px-2 rounded border border-[var(--vscode-input-border,#6e7681)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)]"
                     >
                       {submitTasks.map((t) => (
                         <option key={t.value} value={t.value}>{t.label}</option>
@@ -439,7 +439,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                     <select
                       value={selectedSubmitLanguage}
                       onChange={(e) => setSelectedSubmitLanguage(e.target.value)}
-                      className="w-full h-[28px] text-[12px] px-2 rounded border border-[var(--vscode-input-border)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)]"
+                      className="w-full h-[28px] text-[12px] px-2 rounded border border-[var(--vscode-input-border,#6e7681)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)]"
                     >
                       {submitLanguages.map((l) => (
                         <option key={l.id} value={l.id}>{l.label}</option>
@@ -454,7 +454,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                       onChange={(e) => setSourceCode(e.target.value)}
                       placeholder="在此粘贴或输入代码..."
                       rows={8}
-                      className="w-full text-[12px] p-2 rounded border border-[var(--vscode-input-border)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)] resize-vertical font-mono"
+                      className="w-full text-[12px] p-2 rounded border border-[var(--vscode-input-border,#6e7681)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)] resize-vertical font-mono"
                     />
                   </div>
 
@@ -610,7 +610,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                   <select
                     value={translationMode}
                     onChange={(e) => setTranslationMode(e.target.value as "api" | "free")}
-                    className="h-[26px] text-[11px] px-1 rounded border border-[var(--vscode-input-border)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none"
+                    className="h-[26px] text-[11px] px-1 rounded border border-[var(--vscode-input-border,#6e7681)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none"
                     title="翻译模式"
                   >
                     <option value="free">免费</option>

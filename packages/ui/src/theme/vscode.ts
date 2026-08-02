@@ -15,7 +15,7 @@ export const defaultVSCodeTheme = {
   // 输入框相关
   'vscode-input-background': '#3c3c3c',
   'vscode-input-foreground': '#cccccc',
-  'vscode-input-border': '#3c3c3c',
+  'vscode-input-border': '#6e7681',
   'vscode-input-placeholderForeground': '#cccccc80',
   
   // 下拉框相关

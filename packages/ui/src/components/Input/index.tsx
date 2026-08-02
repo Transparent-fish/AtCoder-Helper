@@ -8,10 +8,12 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, className = '', disabled = false, ...props }, ref) => {
     const baseStyles = `
-      block w-full rounded border-vscode-input-border
+      block w-full rounded
+      border border-[var(--vscode-input-border,#6e7681)]
+      shadow-[inset_0_0_0_1px_var(--vscode-input-border,#6e7681)]
       bg-vscode-input-background text-vscode-input-foreground
       placeholder-vscode-input-placeholder
-      focus:ring-2 focus:ring-offset-2
+      focus:ring-2 focus:ring-offset-2 focus:ring-[var(--vscode-focusBorder,#007fd4)]
       transition-colors duration-200
       form-input
     `;
