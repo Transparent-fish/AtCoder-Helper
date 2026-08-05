@@ -8,7 +8,8 @@ import { runCommand } from "./tools/command";
 import { fetchSubmitPage, submitCodeWithRedirect } from "./tools/submit";
 import { buildCphProblem, sendToCph } from "./tools/cph"
 import { IncomingMessage } from "./tools/types";
-import { send } from "process";
+import { getWebviewContent } from "./tools/webview";
+import { AtCoderViewProvider } from "./viewProvider";
 
 const log = {
   info: (...args: unknown[]) => {
@@ -21,22 +22,6 @@ const log = {
 };
 
 const sleep = (ms: number): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, ms));
-
-function getWebviewContent(webviewJsSrc: vscode.Uri): string {
-  return `<!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource: https:; script-src 'unsafe-eval' 'unsafe-inline' vscode-resource:; style-src vscode-resource: 'unsafe-inline';">
-      <title>VSCode Boilerplate</title>
-    </head>
-    <body>
-      <div id="root"></div>
-      <script src="${webviewJsSrc}"></script>
-    </body>
-  </html>`;
-}
 
 function handleErrorWithCfAndLogin(error: unknown, send: (payload: Record<string, unknown>) => void): boolean {
   if (error instanceof CfError) {
@@ -271,7 +256,7 @@ export async function handleExportToCph(problem: AtCoderProblem, send: (payload:
     send({ type: "cphExportResult", success: true, message: "success send to cph" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "fail to send cph";
-    send({ type: "error", success: false, message: message });
+    send({ type: "cphExportResult", success: false, message: message });
   }
 }
 
@@ -389,6 +374,12 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(registerSetAtCoderCookie(context));
     context.subscriptions.push(
       vscode.commands.registerCommand("extension.showWebview", createShowWebview(context))
+    );
+    context.subscriptions.push(
+      vscode.window.registerWebviewViewProvider(
+        AtCoderViewProvider.viewType,
+        new AtCoderViewProvider(context)
+      )
     );
   } catch (error) {
     log.error("Failed to activate extension:", error);

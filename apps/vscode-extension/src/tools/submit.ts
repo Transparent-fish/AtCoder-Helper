@@ -46,7 +46,7 @@ function parseOptions(html: string): Array<{ value: string; label: string }> {
     const results: Array<{ value: string; label: string }> = [];
     const optionRegex = /<option[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/gi;
     let m: RegExpExecArray | null;
-    for (;(m = optionRegex.exec(html)) !== null;) {
+    for (; (m = optionRegex.exec(html)) !== null;) {
         const value = m[1];
         if (value) results.push({ value, label: decodeHtmlEntities(m[2].trim()) });
     }
