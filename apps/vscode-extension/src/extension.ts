@@ -6,7 +6,8 @@ import { fetchContest, signedUpContest } from "./tools/SignUpContest";
 import { translateTextRaw, translateTextFree } from "./tools/deepl";
 import { runCommand } from "./tools/command";
 import { fetchSubmitPage, submitCodeWithRedirect } from "./tools/submit";
-import { buildCphProblem, sendToCph } from "./tools/cph"
+import { buildCphProblem, sendToCph } from "./tools/cph";
+import { fetchStandings } from "./tools/standings";
 import { IncomingMessage } from "./tools/types";
 import { getWebviewContent } from "./tools/webview";
 import { AtCoderViewProvider } from "./viewProvider";
@@ -249,6 +250,37 @@ export async function handleFetchSubHistory(contest: string, send: (payload: Rec
   }
 }
 
+export async function handleFetchStandings(contest: string, send: (payload: Record<string, unknown>) => void) {
+  send({ type: "loading", text: `正在获取 ${contest} 排行榜...` });
+  try {
+    const standings = await fetchStandings(contest);
+    send({ type: "standings", contest, standings });
+  } catch (error) {
+    if (!handleErrorWithCfAndLogin(error, send)) {
+      send({ type: "error", text: error instanceof Error ? error.message : "获取排行榜失败" });
+    }
+  }
+}
+
+export async function handleGetContests(context: vscode.ExtensionContext, send: (payload: Record<string, unknown>) => void) {
+  const contests = context.workspaceState.get<string[]>("atcoderContests") ?? [];
+  send({ type: "contestList", contests });
+}
+
+export async function handleAddContest(contest: string, context: vscode.ExtensionContext, send: (payload: Record<string, unknown>) => void) {
+  const list = context.workspaceState.get<string[]>("atcoderContests") ?? [];
+  const next = list.includes(contest) ? list : [...list, contest];
+  await context.workspaceState.update("atcoderContests", next);
+  send({ type: "contestList", contests: next });
+}
+
+export async function handleRemoveContest(contest: string, context: vscode.ExtensionContext, send: (payload: Record<string, unknown>) => void) {
+  const list = context.workspaceState.get<string[]>("atcoderContests") ?? [];
+  const next = list.filter((item) => item !== contest);
+  await context.workspaceState.update("atcoderContests", next);
+  send({ type: "contestList", contests: next });
+}
+
 export async function handleExportToCph(problem: AtCoderProblem, send: (payload: Record<string, unknown>) => void) {
   try {
     const payload = buildCphProblem(problem);
@@ -358,6 +390,40 @@ function createShowWebview(context: vscode.ExtensionContext) {
       context.subscriptions
     );
   };
+}
+
+export function openContestPanel(context: vscode.ExtensionContext, contest: string) {
+  const panel = vscode.window.createWebviewPanel(
+    "atcoderContest",
+    `AtCoder - ${contest}`,
+    vscode.ViewColumn.One,
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+      localResourceRoots: [
+        vscode.Uri.file(path.join(context.extensionPath, "dist")),
+      ],
+    }
+  );
+
+  const webviewJsPath = vscode.Uri.file(
+    path.join(context.extensionPath, "dist", "webview.js")
+  );
+  const webviewJsSrc = panel.webview.asWebviewUri(webviewJsPath);
+
+  panel.webview.html = getWebviewContent(webviewJsSrc, "contest", contest);
+
+  const sendToWebview = (payload: Record<string, unknown>) => {
+    panel.webview.postMessage(payload);
+  };
+
+  panel.webview.onDidReceiveMessage(
+    (message: IncomingMessage) => { runCommand(message, context, sendToWebview); },
+    undefined,
+    context.subscriptions
+  );
+
+  context.subscriptions.push(panel);
 }
 
 export async function activate(context: vscode.ExtensionContext) {

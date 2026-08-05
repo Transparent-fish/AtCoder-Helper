@@ -12,6 +12,11 @@ import {
   handleSubmitCode,
   handleFetchSubHistory,
   handleExportToCph,
+  handleFetchStandings,
+  handleGetContests,
+  handleAddContest,
+  handleRemoveContest,
+  openContestPanel,
 } from "../extension";
 
 const loadCommands = new Set(["loadContest", "loadProblem", "openBrowser"]);
@@ -19,6 +24,7 @@ const deeplCommands = new Set(["translate", "setApiKey"]);
 const cookieCommands = new Set(["getCookie", "setCookie"]);
 const problemCommands = new Set(["registerContest", "copyMarkdown", "alert", "sendCph"]);
 const submitCommands = new Set(["fetchSubmitPage", "submitCode", "fetchSubmissionHistory", "fetchSubmissionDetail"]);
+const contestCommands = new Set(["fetchStandings", "getContests", "addContest", "removeContest", "openContest"]);
 
 export async function runCommand(message: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,) {
   if (loadCommands.has(message.command!)) await runLoadCommand(message, sendToWebview);
@@ -26,7 +32,34 @@ export async function runCommand(message: IncomingMessage, context: vscode.Exten
   else if (cookieCommands.has(message.command!)) await runCookie(message, context, sendToWebview);
   else if (problemCommands.has(message.command!)) await runProblem(message, context, sendToWebview);
   else if (submitCommands.has(message.command!)) await runSubmit(message, context, sendToWebview);
+  else if (contestCommands.has(message.command!)) await runContest(message, context, sendToWebview);
   else throw new Error("unknown command");
+}
+
+async function runContest(command: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,): Promise<boolean> {
+  switch (command.command) {
+    case "fetchStandings":
+      if (!command.contest) return false;
+      await handleFetchStandings(command.contest, sendToWebview);
+      return true;
+    case "getContests":
+      await handleGetContests(context, sendToWebview);
+      return true;
+    case "addContest":
+      if (!command.contest) return false;
+      await handleAddContest(command.contest, context, sendToWebview);
+      return true;
+    case "removeContest":
+      if (!command.contest) return false;
+      await handleRemoveContest(command.contest, context, sendToWebview);
+      return true;
+    case "openContest":
+      if (!command.contest) return false;
+      openContestPanel(context, command.contest);
+      return true;
+    default:
+      return false;
+  }
 }
 
 async function runSubmit(command: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,): Promise<boolean> {
