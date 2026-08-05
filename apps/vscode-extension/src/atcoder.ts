@@ -18,6 +18,8 @@ export interface AtCoderProblem {
     outputFormat: string;
     samples: SampleCase[];
     sampleUrl?: string;
+    timeLimit?: number;
+    memoryLimit?: number;
 }
 
 function decodeEntities(text: string): string {
@@ -148,6 +150,37 @@ function getLangContent(html: string, lang: "en" | "ja"): string {
     return html.slice(start);
 }
 
+function extractHeaderValue(html: string, labels: string[]): string | undefined {
+    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    let rowMatch: RegExpExecArray | null;
+    for (; (rowMatch = rowRegex.exec(html)) !== null;) {
+        const row = rowMatch[1];
+        if (!labels.some((label) => row.includes(label))) continue;
+        const tds = Array.from(row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi));
+        if (tds.length === 0) continue;
+        const value = cleanText(tds[tds.length - 1][1]);
+        return value || undefined;
+    }
+    return undefined;
+}
+
+function extractTimeLimit(html: string): number | undefined {
+    const value = extractHeaderValue(html, ["Time Limit", "時間制限"]);
+    const match = value && value.match(/(\d+(?:\.\d+)?)/);
+    if (!match) return undefined;
+    const ms = value!.toLowerCase().includes("sec")
+        ? parseFloat(match[1]) * 1000
+        : parseFloat(match[1]);
+    return Math.round(ms);
+}
+
+function extractMemoryLimit(html: string): number | undefined {
+    const value = extractHeaderValue(html, ["Memory Limit", "メモリ制限"]);
+    const match = value && value.match(/(\d+(?:\.\d+)?)/);
+    if (!match) return undefined;
+    return Math.round(parseFloat(match[1]));
+}
+
 export function parseProblemPage(html: string, url: string): AtCoderProblem {
     const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
     const title = titleMatch ? cleanText(titleMatch[1]) : "Untitled";
@@ -208,6 +241,8 @@ export function parseProblemPage(html: string, url: string): AtCoderProblem {
         outputFormat,
         samples,
         sampleUrl,
+        timeLimit: extractTimeLimit(html),
+        memoryLimit: extractMemoryLimit(html),
     };
 }
 

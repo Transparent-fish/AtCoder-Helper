@@ -1,12 +1,14 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { fetchAtCoderProblem, fetchAtCoderTasks } from "./atcoder";
+import { AtCoderProblem, fetchAtCoderProblem, fetchAtCoderTasks } from "./atcoder";
 import { CfError, ProxyError, LoginRequiredError, setSessionCookie, fetchSubStatus, fetchSubmitHistory } from "./tools/fetch";
 import { fetchContest, signedUpContest } from "./tools/SignUpContest";
 import { translateTextRaw, translateTextFree } from "./tools/deepl";
 import { runCommand } from "./tools/command";
 import { fetchSubmitPage, submitCodeWithRedirect } from "./tools/submit";
+import { buildCphProblem, sendToCph } from "./tools/cph"
 import { IncomingMessage } from "./tools/types";
+import { send } from "process";
 
 const log = {
   info: (...args: unknown[]) => {
@@ -259,6 +261,17 @@ export async function handleFetchSubHistory(contest: string, send: (payload: Rec
     if (!handleErrorWithCfAndLogin(error, send)) {
       send({ type: "error", text: error instanceof Error ? error.message : "获取提交记录失败" });
     }
+  }
+}
+
+export async function handleExportToCph(problem: AtCoderProblem, send: (payload: Record<string, unknown>) => void) {
+  try {
+    const payload = buildCphProblem(problem);
+    await sendToCph(payload);
+    send({ type: "cphExportResult", success: true, message: "success send to cph" });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "fail to send cph";
+    send({ type: "error", success: false, message: message });
   }
 }
 

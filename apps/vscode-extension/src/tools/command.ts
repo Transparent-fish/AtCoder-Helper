@@ -11,12 +11,13 @@ import {
   handleFetchSubmitPage,
   handleSubmitCode,
   handleFetchSubHistory,
+  handleExportToCph,
 } from "../extension";
 
 const loadCommands = new Set(["loadContest", "loadProblem", "openBrowser"]);
 const deeplCommands = new Set(["translate", "setApiKey"]);
 const cookieCommands = new Set(["getCookie", "setCookie"]);
-const problemCommands = new Set(["registerContest", "copyMarkdown", "alert"]);
+const problemCommands = new Set(["registerContest", "copyMarkdown", "alert", "sendCph"]);
 const submitCommands = new Set(["fetchSubmitPage", "submitCode", "fetchSubmissionHistory", "fetchSubmissionDetail"]);
 
 export async function runCommand(message: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,) {
@@ -62,6 +63,11 @@ async function runProblem(command: IncomingMessage, context: vscode.ExtensionCon
     case "alert":
       vscode.window.showInformationMessage(command.text ?? "");
       sendToWebview({ type: "update", text: `Extension received: ${command.text ?? ""}` });
+      return true;
+    case "sendCph":
+      if (command.problem) {
+        await handleExportToCph(command.problem, sendToWebview);
+      }
       return true;
     default:
       return false;

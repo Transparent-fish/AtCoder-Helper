@@ -34,9 +34,11 @@ export interface SubmissionRecord {
 
 export interface WebviewMessage {
   type?: string;
-  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest' | 'copyMarkdown' | 'fetchSubmitPage' | 'submitCode' | 'fetchSubmissionHistory';
+  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest' | 'copyMarkdown' | 'sendCph' | 'fetchSubmitPage' | 'submitCode' | 'fetchSubmissionHistory';
   statusMessage?: string;
   text?: string;
+  success?: boolean;
+  message?: string;
   contest?: string;
   task?: string;
   taskScreenName?: string;
