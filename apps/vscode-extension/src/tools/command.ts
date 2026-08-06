@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { copyMarkdown } from "./copy";
 import { IncomingMessage } from "./types";
+import { openContestPanel, openSubmissionPanel } from "../extension"
 import {
   handleContestLoad,
   handleProblemLoad,
@@ -15,9 +16,7 @@ import {
   handleFetchStandings,
   handleGetContests,
   handleFetchSubmissionDetail,
-  openContestPanel,
-  openSubmissionPanel,
-} from "../extension";
+} from "./handle";
 
 const loadCommands = new Set(["loadContest", "loadProblem", "openBrowser"]);
 const deeplCommands = new Set(["translate", "setApiKey"]);
