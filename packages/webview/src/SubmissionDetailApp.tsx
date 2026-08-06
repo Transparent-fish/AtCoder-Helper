@@ -32,6 +32,7 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
     const [detail, setDetail] = React.useState<SubmissionDetail | null>(null);
     const [isLoading, setIsLoading] = React.useState(false);
     const [copied, setCopied] = React.useState(false);
+    const [showJudgeSets, setShowJudgeSets] = React.useState(false);
     const [status, setStatus] = React.useState("");
 
     const fetchDetail = () => {
@@ -136,6 +137,66 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
                                 {renderMeta("内存", detail.memory)}
                             </div>
                         </Card>
+
+                        {detail.judgeSets && detail.judgeSets.length > 0 && (
+                            <Card className="p-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-[12px] font-semibold">测试点</div>
+                                    <Button
+                                        onClick={() => setShowJudgeSets((v) => !v)}
+                                        size="sm"
+                                        variant="secondary"
+                                        className="h-[24px] text-[11px]"
+                                    >
+                                        {showJudgeSets ? "收起" : "展开"}
+                                    </Button>
+                                </div>
+                                {showJudgeSets && (
+                                    <div className="space-y-3">
+                                        {detail.judgeSets.map((set) => (
+                                            <div key={set.name} className="space-y-1">
+                                                <div className="flex items-center gap-2 text-[12px]">
+                                                    <span className="font-semibold">{set.name}</span>
+                                                    <span className="opacity-60">
+                                                        {set.score}
+                                                        {set.maxScore ? ` / ${set.maxScore}` : ""}
+                                                    </span>
+                                                </div>
+                                                {set.statuses.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {set.statuses.map((s, i) => (
+                                                            <span
+                                                                key={`${s.status}-${i}`}
+                                                                className={`text-[10px] px-1 rounded font-bold ${statusColor(s.status)}`}
+                                                            >
+                                                                {s.status}
+                                                                {s.cnt > 1 ? ` ×${s.cnt}` : ""}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {set.cases && set.cases.length > 0 ? (
+                                                    <div className="space-y-0.5">
+                                                        {set.cases.map((c, i) => (
+                                                            <div key={`${c.name}-${i}`} className="flex items-center gap-2 text-[11px]">
+                                                                <span className={`w-[46px] flex-shrink-0 text-center text-[10px] px-1 rounded font-bold ${statusColor(c.status)}`}>
+                                                                    {c.status}
+                                                                </span>
+                                                                <span className="opacity-70 break-all">{c.name}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : set.caseName.length > 0 ? (
+                                                    <div className="text-[10px] opacity-60 break-all leading-relaxed">
+                                                        {set.caseName.join(", ")}
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </Card>
+                        )}
 
                         <Card className="p-3 space-y-2">
                             <div className="flex items-center justify-between">

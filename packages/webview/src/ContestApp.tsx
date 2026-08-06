@@ -53,6 +53,11 @@ const statusColor = (status: string): string => {
     }
 };
 
+const formatSubmitTime = (time: string): string => {
+    const m = time.match(/(\d{2})-(\d{2}) (\d{2}:\d{2})/);
+    return m ? `${m[1]}-${m[2]} ${m[3]}` : time;
+};
+
 const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
     const vscode = useVSCode();
     const contest = initContest;
@@ -606,8 +611,8 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
                     <div className="space-y-1 max-h-[300px] overflow-y-auto">
                         {submissions.map((s) => (
                             <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 text-[12px] border border-[var(--vscode-panel-border)] rounded hover:bg-[var(--vscode-list-hoverBackground)]">
-                                <span className="text-[11px] opacity-60 w-[120px] flex-shrink-0">{s.time}</span>
-                                <span className="flex-1 truncate">{s.task}</span>
+                                <span className="flex-1 truncate font-medium" title={`${s.task} · ${s.taskScreenName}`}>{s.task}</span>
+                                <span className="text-[10px] opacity-50 flex-shrink-0">{formatSubmitTime(s.time)}</span>
                                 <span className={`text-[10px] px-1 rounded font-bold ${statusColor(s.status)}`}>{s.status}</span>
                                 <span className="text-[11px] opacity-60 w-[50px] text-right">{s.score}</span>
                                 <button

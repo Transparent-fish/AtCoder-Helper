@@ -403,6 +403,30 @@ export async function fetchSubStatus(contest: string): Promise<Map<string, strin
 	return now;
 }
 
+function stripHtmlTags(value: string): string {
+	return value
+		.replace(/<[^>]+>/g, "")
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+		.replace(/&nbsp;/gi, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function splitRowCells(rowHtml: string): string[] {
+	const cells: string[] = [];
+	const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+	let match: RegExpExecArray | null;
+	while ((match = cellRegex.exec(rowHtml)) !== null) {
+		cells.push(match[1]);
+	}
+	return cells;
+}
+
 export async function fetchSubmitHistory(contest: string): Promise<SubRecord[]> {
 	const html = await fetchText(`https://atcoder.jp/contests/${contest}/submissions/me`);
 	const records: SubRecord[] = [];
@@ -410,26 +434,28 @@ export async function fetchSubmitHistory(contest: string): Promise<SubRecord[]> 
 	let rowMatch: RegExpExecArray | null;
 	for (; (rowMatch = reg.exec(html)) !== null;) {
 		const rowHtml = rowMatch[1];
-		const timeMatch = rowHtml.match(/<td[^>]*class="text-center"[^>]*>([\s\S]*?)<\/td>/i);
-		if (!timeMatch) continue;
-		const time = timeMatch[1].trim().replace(/<[^>]+>/g, "");
+		const cells = splitRowCells(rowHtml);
+		if (cells.length < 7) continue;
 
-		const taskLinkMatch = rowHtml.match(/href="\/contests\/[^/]+\/tasks\/([^"#?]+)"[^>]*>([^<]+)</i);
+		const timeMatch = cells[0].match(/<time[^>]*>([^<]+)<\/time>/i);
+		const time = timeMatch ? timeMatch[1].trim() : stripHtmlTags(cells[0]);
+		if (!time) continue;
+
+		const taskLinkMatch = cells[1].match(/href="[^"]*\/tasks\/([^"#?]+)"[^>]*>([\s\S]*?)<\/a>/i);
 		if (!taskLinkMatch) continue;
 		const taskScreenName = taskLinkMatch[1];
-		const task = taskLinkMatch[2].trim();
+		const task = stripHtmlTags(taskLinkMatch[2]);
 
-		const langMatch = rowHtml.match(/<td[^>]*class="text-center"[^>]*>[\s\S]*?<\/td>\s*<td[^>]*>([^<]*)<\/td>/i);
-		const language = langMatch ? langMatch[1].trim() : "";
+		const language = stripHtmlTags(cells[3]);
 
-		const scoreMatch = rowHtml.match(/<td[^>]*class="text-right"[^>]*>\s*(\d+)\s*<\/td>/i);
+		const scoreMatch = cells[4].match(/(\d+)/);
 		const score = scoreMatch ? scoreMatch[1] : "0";
 
-		const statusMatch = rowHtml.match(/<span[^>]*class=(["'])[^"']*\blabel\b[^"']*\1[^>]*>\s*([^<]+)\s*<\/span>/i);
+		const statusMatch = cells[6].match(/<span[^>]*class=(["'])[^"']*\blabel\b[^'"]*\1[^>]*>\s*([^<]+)\s*<\/span>/i);
 		if (!statusMatch) continue;
 		const status = statusMatch[2].trim();
 
-		const detailMatch = rowHtml.match(/<a[^>]*href="\/contests\/[^/]+\/submissions\/(\d+)"[^>]*>/i);
+		const detailMatch = rowHtml.match(/href="\/contests\/[^/]+\/submissions\/(\d+)"/i);
 		if (!detailMatch) continue;
 		const id = detailMatch[1];
 

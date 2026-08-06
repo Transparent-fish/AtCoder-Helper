@@ -45,6 +45,20 @@ export interface HomepageContest {
   category: "active" | "upcoming" | "recent" | "daily";
 }
 
+export interface JudgeStatus {
+  status: string;
+  cnt: number;
+}
+
+export interface JudgeSet {
+  name: string;
+  score: string;
+  maxScore: string;
+  statuses: JudgeStatus[];
+  caseName: string[];
+  cases?: Array<{ name: string; status: string }>;
+}
+
 export interface SubmissionDetail {
   id: string;
   contest: string;
@@ -58,6 +72,7 @@ export interface SubmissionDetail {
   codeLength?: string;
   execTime?: string;
   memory?: string;
+  judgeSets?: JudgeSet[];
 }
 
 export interface WebviewMessage {
