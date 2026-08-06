@@ -7,7 +7,7 @@ export interface Standing {
 }
 
 interface Standings {
-    StandingData?: Array<{
+    StandingsData?: Array<{
         Rank?: number;
         UserName?: string;
         TotalResult?: { Score?: number };
@@ -24,7 +24,7 @@ export async function fetchStandings(contest: string, limit = 100): Promise<Stan
         const reason = error instanceof Error ? error.message : "invalid json";
         throw new Error(`排行榜数据解析失败: ${reason}`);
     }
-    const rows = data.StandingData ?? [];
+    const rows = data.StandingsData ?? [];
     return rows.slice(0, limit).map((item) => ({
         rank: item.Rank ?? 0,
         user: item.UserName ?? "unknown",

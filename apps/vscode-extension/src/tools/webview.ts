@@ -1,11 +1,12 @@
 import * as vscode from "vscode";
 
-export type WebviewMode = "editor" | "sidebar" | "contest";
+export type WebviewMode = "editor" | "sidebar" | "contest" | "submission";
 
 export function getWebviewContent(
     webviewJsSrc: vscode.Uri,
     mode?: WebviewMode,
     initContest?: string,
+    initSubmissionId?: string,
 ): string {
     const globals: string[] = [];
     if (mode) {
@@ -13,6 +14,9 @@ export function getWebviewContent(
     }
     if (initContest) {
         globals.push(`window.__ATCODER_INIT_CONTEST__ = ${JSON.stringify(initContest)};`);
+    }
+    if (initSubmissionId) {
+        globals.push(`window.__ATCODER_SUBMISSION_ID__ = ${JSON.stringify(initSubmissionId)};`);
     }
     const initScript = globals.length > 0 ? `<script>${globals.join("")}</script>` : "";
     return `<!DOCTYPE html>

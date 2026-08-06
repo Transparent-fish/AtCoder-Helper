@@ -103,22 +103,37 @@ const BROWSER_HEADERS = {
 
 let sessionCookie = "";
 
+let staleCookieNotified = false;
+let staleCookieHandler: (() => void) | null = null;
+
+export function setStaleCookieHandler(handler: (() => void) | null): void {
+	staleCookieHandler = handler;
+}
+
+function notifyStaleCookie(): void {
+	if (staleCookieHandler && !staleCookieNotified) {
+		staleCookieNotified = true;
+		staleCookieHandler();
+	}
+}
+
 export function setSessionCookie(cookie: string): void {
 	console.log(`[setSessionCookie] 设置 Cookie: ${cookie ? cookie.substring(0, 40) + "..." : "清空"}`);
 	sessionCookie = cookie;
+	staleCookieNotified = false;
 }
 
 export function getSessionCookie(): string {
 	return sessionCookie;
 }
 
-export function getHeaders(): Record<string, string> {
+export function getHeaders(withCookie = true): Record<string, string> {
 	const headers: Record<string, string> = { ...BROWSER_HEADERS };
-	if (sessionCookie) {
+	if (withCookie && sessionCookie) {
 		headers["Cookie"] = sessionCookie;
 		console.log(`[getHeaders] 已注入 Cookie: ${sessionCookie.substring(0, 40)}...`);
 	} else {
-		console.log(`[getHeaders] 未设置 Cookie`);
+		console.log(`[getHeaders] 未注入 Cookie`);
 	}
 	return headers;
 }
@@ -279,24 +294,41 @@ function handleResponse(
 	});
 }
 
-export function fetchText(url: string): Promise<string> {
+export function fetchText(url: string, opts?: { withCookie?: boolean }): Promise<string> {
+	const withCookie = opts?.withCookie ?? true;
+	if (withCookie && sessionCookie) {
+		return fetchTextOnce(url, true).catch((error) => {
+			if (error instanceof CfError) {
+				console.log(`[fetchText] 带 Cookie 请求触发 Cloudflare，改用无 Cookie 重试: ${url}`);
+				return fetchTextOnce(url, false).then((body) => {
+					notifyStaleCookie();
+					return body;
+				});
+			}
+			throw error;
+		});
+	}
+	return fetchTextOnce(url, withCookie);
+}
+
+function fetchTextOnce(url: string, withCookie: boolean): Promise<string> {
 	const logPrefix = `[fetchText]`;
 
 	const savedProxy = saveProxyEnv();
 
 	function restoreProxy() { restoreProxyEnv(savedProxy); }
 
-	console.log(`${logPrefix} 开始请求`, url, `Cookie: ${sessionCookie ? sessionCookie.substring(0, 25) + "..." : "无"}`);
+	console.log(`${logPrefix} 开始请求`, url, withCookie ? `Cookie: ${sessionCookie ? sessionCookie.substring(0, 25) + "..." : "无"}` : "无 Cookie(降级)");
 	return new Promise((resolve, reject) => {
 		const client = url.startsWith("https") ? https : http;
 		const req = client.get(
 			url,
 			{
-				headers: getHeaders(),
+				headers: getHeaders(withCookie),
 				agent: getDirectAgent(url),
 			},
 			(res) => {
-				handleResponse(url, res, savedProxy, resolve, reject, fetchText);
+				handleResponse(url, res, savedProxy, resolve, reject, (u) => fetchTextOnce(u, withCookie), logPrefix);
 			}
 		);
 		req.on("error", (err: Error) => {
@@ -405,4 +437,3 @@ export async function fetchSubmitHistory(contest: string): Promise<SubRecord[]> 
 	}
 	return records;
 }
-

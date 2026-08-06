@@ -4,6 +4,7 @@ import { VSCodeProvider } from "./VSCodeProvider";
 import { WebviewApp } from "./WebviewApp";
 import { SidebarApp } from "./SidebarApp";
 import { ContestApp } from "./ContestApp";
+import { SubmissionDetailApp } from "./SubmissionDetailApp";
 import "./styles.css";
 
 const mode = window.__ATCODER_MODE__;
@@ -18,6 +19,11 @@ if (container) {
           <ContestApp initContest={window.__ATCODER_INIT_CONTEST__} />
         ) : mode === "sidebar" ? (
           <SidebarApp />
+        ) : mode === "submission" ? (
+          <SubmissionDetailApp
+            initContest={window.__ATCODER_INIT_CONTEST__}
+            initSubmissionId={window.__ATCODER_SUBMISSION_ID__}
+          />
         ) : (
           <WebviewApp />
         )}

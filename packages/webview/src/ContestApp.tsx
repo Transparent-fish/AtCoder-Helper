@@ -67,6 +67,9 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
     const [signed, setSigned] = React.useState(false);
     const [hasCookie, setHasCookie] = React.useState(false);
     const [registrationMessage, setRegistrationMessage] = React.useState<string | null>(null);
+    const [contestTitle, setContestTitle] = React.useState("");
+    const [announcement, setAnnouncement] = React.useState("");
+    const [cfUrl, setCfUrl] = React.useState<string | null>(null);
 
     const [submitTasks, setSubmitTasks] = React.useState<SubmitTask[]>([]);
     const [submitLanguages, setSubmitLanguages] = React.useState<SubmitLanguage[]>([]);
@@ -74,6 +77,7 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
     const [selectedSubmitLanguage, setSelectedSubmitLanguage] = React.useState("");
     const [sourceCode, setSourceCode] = React.useState("");
     const [submitResult, setSubmitResult] = React.useState<{ success: boolean; message: string; url?: string } | null>(null);
+    const [submitPageError, setSubmitPageError] = React.useState<{ message: string; url?: string } | null>(null);
 
     const [standings, setStandings] = React.useState<Standing[]>([]);
     const [loadingStandings, setLoadingStandings] = React.useState(false);
@@ -130,6 +134,7 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
 
     const handleFetchSubmitPage = () => {
         setSubmitResult(null);
+        setSubmitPageError(null);
         setSubmitTasks([]);
         setSubmitLanguages([]);
         setSourceCode("");
@@ -188,6 +193,13 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
             }
             if (message.type === "contestInfo") {
                 setRated(message.Rated ?? false);
+                setContestTitle(message.title ?? "");
+                setAnnouncement(message.announcement ?? "");
+            }
+            if (message.type === "cf_challenge") {
+                setCfUrl(message.url ?? null);
+                setIsLoading(false);
+                setStatus("AtCoder 触发 Cloudflare 验证，插件无法直接访问，请在浏览器中完成验证");
             }
             if (message.type === "problem") {
                 setProblem(message.problem ?? null);
@@ -222,6 +234,7 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
                 setStatus("翻译完成");
             }
             if (message.type === "submitPage") {
+                setSubmitPageError(null);
                 setSubmitTasks(message.submitTasks ?? []);
                 setSubmitLanguages(message.languages ?? []);
                 if (message.submitTasks && message.submitTasks.length > 0) {
@@ -231,6 +244,11 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
                     setSelectedSubmitLanguage(message.languages[0].id);
                 }
                 setStatus("已获取提交页面信息");
+                setIsLoading(false);
+            }
+            if (message.type === "submitPageError") {
+                setSubmitPageError({ message: message.message ?? "提交页面无法访问", url: message.url });
+                setStatus(message.message ?? "提交页面无法访问");
                 setIsLoading(false);
             }
             if (message.type === "submitResult") {
@@ -260,10 +278,13 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
     }, []);
 
     const renderInfoTab = () => (
-        <div className="p-3 space-y-3">
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
             <Card className="p-3 space-y-2">
-                <div className="text-[13px] font-semibold">比赛 {contest}</div>
-                <div className="text-[12px] opacity-70">评级比赛：{rated ? "是" : "否"}</div>
+                <div className="space-y-1">
+                    <div className="text-[13px] font-semibold">{contestTitle || `比赛 ${contest}`}</div>
+                    <div className="text-[12px] opacity-70">比赛代号：{contest}</div>
+                    <div className="text-[12px] opacity-70">评级比赛：{rated ? "是" : "否"}</div>
+                </div>
                 <div className="flex items-center gap-2">
                     <Button
                         onClick={handleRegister}
@@ -293,6 +314,13 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
                     </div>
                 )}
             </Card>
+
+            {announcement && (
+                <Card className="p-3 space-y-2">
+                    <div className="text-[12px] font-semibold">公告</div>
+                    <HtmlContent html={announcement} />
+                </Card>
+            )}
         </div>
     );
 
@@ -463,14 +491,36 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
     const renderSubmitTab = () => (
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
             <Card className="p-3 space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-1">
                     <div className="text-[13px] font-semibold">提交代码到 {contest}</div>
-                    <Button onClick={handleFetchSubmitPage} disabled={isLoading} size="sm" className="h-[26px] text-[11px]">
-                        {submitTasks.length === 0 ? (isLoading ? "获取中..." : "获取提交页面") : "刷新"}
-                    </Button>
+                    <div className="flex gap-1 items-center">
+                        <Button
+                            onClick={() => vscode.postMessage({ command: "openBrowser", url: `https://atcoder.jp/contests/${contest}/submit` })}
+                            size="sm"
+                            variant="secondary"
+                            className="h-[26px] text-[11px]"
+                            title="在浏览器中打开提交页（如遇 Cloudflare 验证可在浏览器中完成）"
+                        >
+                            浏览器打开
+                        </Button>
+                        <Button onClick={handleFetchSubmitPage} disabled={isLoading} size="sm" className="h-[26px] text-[11px]">
+                            {submitTasks.length === 0 ? (isLoading ? "获取中..." : "获取提交页面") : "刷新"}
+                        </Button>
+                    </div>
                 </div>
 
-                {submitTasks.length === 0 && submitLanguages.length === 0 ? (
+                {submitPageError ? (
+                    <div className="space-y-2">
+                        <div className="text-[12px] p-2 rounded bg-red-500/10 text-red-500">{submitPageError.message}</div>
+                        <Button
+                            onClick={() => vscode.postMessage({ command: "openBrowser", url: submitPageError.url ?? `https://atcoder.jp/contests/${contest}/submit` })}
+                            size="sm"
+                            className="h-[26px] text-[11px]"
+                        >
+                            在浏览器中打开提交页
+                        </Button>
+                    </div>
+                ) : submitTasks.length === 0 && submitLanguages.length === 0 ? (
                     <div className="text-[12px] opacity-60">点击「获取提交页面」开始提交。</div>
                 ) : (
                     <div className="space-y-3">
@@ -560,6 +610,12 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
                                 <span className="flex-1 truncate">{s.task}</span>
                                 <span className={`text-[10px] px-1 rounded font-bold ${statusColor(s.status)}`}>{s.status}</span>
                                 <span className="text-[11px] opacity-60 w-[50px] text-right">{s.score}</span>
+                                <button
+                                    onClick={() => vscode.postMessage({ command: "openSubmission", contest, id: s.id })}
+                                    className="text-[11px] underline opacity-60 hover:opacity-100 flex-shrink-0"
+                                >
+                                    详情
+                                </button>
                                 <a
                                     href="#"
                                     onClick={(e) => { e.preventDefault(); vscode.postMessage({ command: "openBrowser", url: `https://atcoder.jp/contests/${contest}/submissions/${s.id}` }); }}
@@ -621,7 +677,7 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
     };
 
     return (
-        <div className="h-screen flex flex-col bg-[var(--vscode-editor-background)] text-[var(--vscode-editor-foreground)]">
+        <div className="h-screen flex flex-col relative bg-[var(--vscode-editor-background)] text-[var(--vscode-editor-foreground)]">
             <div className="h-[35px] flex items-center px-3 bg-[var(--vscode-titleBar-activeBackground)] text-[var(--vscode-titleBar-activeForeground)]">
                 <span className="text-[13px] select-none truncate">AtCoder - {contest}</span>
                 {hasCookie && (
@@ -640,6 +696,27 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
                 ))}
             </div>
             {renderContent()}
+            {cfUrl && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--vscode-editor-background)]/80">
+                    <div className="p-6 flex flex-col items-center justify-center gap-4 max-w-md text-center">
+                        <div className="text-[14px] font-medium text-yellow-600">Cloudflare 验证</div>
+                        <div className="text-[12px] opacity-70">
+                            AtCoder 触发了 Cloudflare 验证，插件无法直接访问。请点击下方按钮在浏览器中打开，完成验证后重新设置 Cookie 再试。
+                        </div>
+                        <div className="flex gap-3 mt-2 flex-wrap justify-center">
+                            <Button
+                                onClick={() => vscode.postMessage({ command: "openBrowser", url: cfUrl })}
+                                className="h-[32px] text-[12px]"
+                            >
+                                在浏览器中打开
+                            </Button>
+                            <Button onClick={() => setCfUrl(null)} variant="secondary" className="h-[32px] text-[12px]">
+                                关闭
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {status && (
                 <div className="text-[11px] opacity-60 px-2 py-1 border-t border-[var(--vscode-panel-border)]">
                     {status}

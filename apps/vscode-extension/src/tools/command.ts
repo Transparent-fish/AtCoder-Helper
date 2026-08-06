@@ -14,9 +14,9 @@ import {
   handleExportToCph,
   handleFetchStandings,
   handleGetContests,
-  handleAddContest,
-  handleRemoveContest,
+  handleFetchSubmissionDetail,
   openContestPanel,
+  openSubmissionPanel,
 } from "../extension";
 
 const loadCommands = new Set(["loadContest", "loadProblem", "openBrowser"]);
@@ -24,7 +24,7 @@ const deeplCommands = new Set(["translate", "setApiKey"]);
 const cookieCommands = new Set(["getCookie", "setCookie"]);
 const problemCommands = new Set(["registerContest", "copyMarkdown", "alert", "sendCph"]);
 const submitCommands = new Set(["fetchSubmitPage", "submitCode", "fetchSubmissionHistory", "fetchSubmissionDetail"]);
-const contestCommands = new Set(["fetchStandings", "getContests", "addContest", "removeContest", "openContest"]);
+const contestCommands = new Set(["fetchStandings", "getContests", "openContest", "openSubmission"]);
 
 export async function runCommand(message: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,) {
   if (loadCommands.has(message.command!)) await runLoadCommand(message, sendToWebview);
@@ -43,19 +43,15 @@ async function runContest(command: IncomingMessage, context: vscode.ExtensionCon
       await handleFetchStandings(command.contest, sendToWebview);
       return true;
     case "getContests":
-      await handleGetContests(context, sendToWebview);
-      return true;
-    case "addContest":
-      if (!command.contest) return false;
-      await handleAddContest(command.contest, context, sendToWebview);
-      return true;
-    case "removeContest":
-      if (!command.contest) return false;
-      await handleRemoveContest(command.contest, context, sendToWebview);
+      await handleGetContests(sendToWebview);
       return true;
     case "openContest":
       if (!command.contest) return false;
       openContestPanel(context, command.contest);
+      return true;
+    case "openSubmission":
+      if (!command.contest || !command.id) return false;
+      openSubmissionPanel(context, command.contest, command.id);
       return true;
     default:
       return false;
@@ -75,6 +71,10 @@ async function runSubmit(command: IncomingMessage, context: vscode.ExtensionCont
     case "fetchSubmissionHistory":
       if (!command.contest) return false;
       await handleFetchSubHistory(command.contest, sendToWebview);
+      return true;
+    case "fetchSubmissionDetail":
+      if (!command.contest || !command.id) return false;
+      await handleFetchSubmissionDetail(command.contest, command.id, sendToWebview);
       return true;
     default:
       return false;
