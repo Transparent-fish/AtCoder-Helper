@@ -32,9 +32,15 @@ export interface SubmissionRecord {
   status: string;
 }
 
+export interface Standing {
+  rank: number;
+  user: string;
+  score: string;
+}
+
 export interface WebviewMessage {
   type?: string;
-  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest' | 'copyMarkdown' | 'sendCph' | 'fetchSubmitPage' | 'submitCode' | 'fetchSubmissionHistory';
+  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest' | 'copyMarkdown' | 'sendCph' | 'fetchSubmitPage' | 'submitCode' | 'fetchSubmissionHistory' | 'fetchStandings' | 'getContests' | 'addContest' | 'removeContest' | 'openContest';
   statusMessage?: string;
   text?: string;
   success?: boolean;
@@ -63,6 +69,8 @@ export interface WebviewMessage {
   submitResult?: SubmitResult;
   statuses?: Record<string, string>;
   submissions?: SubmissionRecord[];
+  contests?: string[];
+  standings?: Standing[];
 }
 
 export interface VSCodeAPI {
@@ -74,6 +82,8 @@ export interface VSCodeAPI {
 declare global {
   interface Window {
     acquireVsCodeApi: () => VSCodeAPI;
+    __ATCODER_MODE__?: "editor" | "sidebar" | "contest";
+    __ATCODER_INIT_CONTEST__?: string;
   }
 }
 

@@ -43,7 +43,7 @@ export class AtCoderViewProvider implements vscode.WebviewViewProvider {
             vscode.Uri.file(path.join(this.context.extensionPath, "dist", "webview.js")),
         );
 
-        webview.html = getWebviewContent(webviewJsSrc);
+        webview.html = getWebviewContent(webviewJsSrc, "sidebar");
 
         this.bindMessageHandlers();
 

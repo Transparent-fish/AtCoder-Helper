@@ -2,16 +2,25 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { VSCodeProvider } from "./VSCodeProvider";
 import { WebviewApp } from "./WebviewApp";
+import { SidebarApp } from "./SidebarApp";
+import { ContestApp } from "./ContestApp";
 import "./styles.css";
 
-// 初始化 React 应用
+const mode = window.__ATCODER_MODE__;
+
 const container = document.getElementById("root");
 if (container) {
   const root = createRoot(container);
   root.render(
     <React.StrictMode>
       <VSCodeProvider>
-        <WebviewApp />
+        {mode === "contest" ? (
+          <ContestApp initContest={window.__ATCODER_INIT_CONTEST__} />
+        ) : mode === "sidebar" ? (
+          <SidebarApp />
+        ) : (
+          <WebviewApp />
+        )}
       </VSCodeProvider>
     </React.StrictMode>
   );
