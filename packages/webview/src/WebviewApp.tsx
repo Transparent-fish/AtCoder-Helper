@@ -83,6 +83,12 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
     vscode.postMessage({ command: "translate", payload: texts, targetLang: "ZH", translationMode } as WebviewMessage);
   };
 
+  const doExportToCph = () => {
+    if (!problem) return;
+    setStatus("正在导出到 CPH...");
+    vscode.postMessage({ command: "sendCph", problem });
+  };
+
   const handleFetchSubmitPage = () => {
     setSubmitResult(null);
     setSubmitTasks([]);
@@ -156,6 +162,11 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
         setStatus(message.text ?? "操作失败");
         setIsLoading(false);
         setTranslating(false);
+      }
+      if (message.type === "cphExportResult") {
+        const ok = message.success === true;
+        setStatus(ok ? (message.message ?? "已发送到 CPH") : (message.message ?? "导出到 CPH 失败"));
+        setIsLoading(false);
       }
       if (message.type === "cf_challenge") {
         setCfUrl(message.url ?? null);
@@ -618,6 +629,9 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                   </select>
                   <Button onClick={doCopyMarkdown} size="sm" variant="secondary" className="h-[26px] text-[11px]">
                     复制 Markdown
+                  </Button>
+                  <Button onClick={doExportToCph} size="sm" variant="secondary" className="h-[26px] text-[11px]" title="导出到 CPH（需已安装 Competitive Programming Helper）">
+                    导出 CPH
                   </Button>
                 </div>
               </div>
