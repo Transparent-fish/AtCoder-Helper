@@ -1,18 +1,14 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { AtCoderProblem, fetchAtCoderProblem, fetchAtCoderTasks } from "./atcoder";
-import { CfError, ProxyError, LoginRequiredError, setSessionCookie, setStaleCookieHandler, fetchSubStatus, fetchSubmitHistory } from "./tools/fetch";
-import { fetchContest, signedUpContest, fetchContestAnnouncement } from "./tools/SignUpContest";
+import { CfError, ProxyError, LoginRequiredError, setSessionCookie, fetchSubStatus, fetchSubmitHistory } from "./tools/fetch";
+import { fetchContest, signedUpContest } from "./tools/SignUpContest";
 import { translateTextRaw, translateTextFree } from "./tools/deepl";
 import { runCommand } from "./tools/command";
 import { fetchSubmitPage, submitCodeWithRedirect } from "./tools/submit";
-import { buildCphProblem, sendToCph } from "./tools/cph";
-import { fetchStandings } from "./tools/standings";
-import { fetchHomepageContests } from "./tools/homepage";
-import { fetchSubmissionDetail } from "./tools/submission";
+import { buildCphProblem, sendToCph } from "./tools/cph"
 import { IncomingMessage } from "./tools/types";
-import { getWebviewContent } from "./tools/webview";
-import { AtCoderViewProvider } from "./viewProvider";
+import { send } from "process";
 
 const log = {
   info: (...args: unknown[]) => {
@@ -25,6 +21,22 @@ const log = {
 };
 
 const sleep = (ms: number): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+function getWebviewContent(webviewJsSrc: vscode.Uri): string {
+  return `<!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource: https:; script-src 'unsafe-eval' 'unsafe-inline' vscode-resource:; style-src vscode-resource: 'unsafe-inline';">
+      <title>VSCode Boilerplate</title>
+    </head>
+    <body>
+      <div id="root"></div>
+      <script src="${webviewJsSrc}"></script>
+    </body>
+  </html>`;
+}
 
 function handleErrorWithCfAndLogin(error: unknown, send: (payload: Record<string, unknown>) => void): boolean {
   if (error instanceof CfError) {
@@ -77,8 +89,7 @@ export async function handleContestLoad(contest: string, send: (payload: Record<
 
   try {
     const contestInfo = await fetchContest(contest);
-    const announcement = await fetchContestAnnouncement(contest);
-    send({ type: "contestInfo", Rated: contestInfo.Rated, announcement, title: contestInfo.title });
+    send({ type: "contestInfo", Rated: contestInfo.Rated });
   } catch (e) {
     //不处理
   }
@@ -200,14 +211,6 @@ export async function handleFetchSubmitPage(contest: string, send: (payload: Rec
     send({ type: "submitPage", submitTasks: pageData.tasks, languages: pageData.languages, csrfToken: pageData.csrfToken });
     send({ type: "update", text: "已获取提交页面信息" });
   } catch (error) {
-    if (error instanceof CfError) {
-      send({ type: "submitPageError", message: "该比赛提交需要 Cloudflare 验证，插件无法自动完成。请在浏览器中打开提交页完成验证后提交。", url: error.url });
-      return;
-    }
-    if (error instanceof LoginRequiredError) {
-      send({ type: "submitPageError", message: "提交需要登录，请先设置 AtCoder Cookie 后再试。", url: `https://atcoder.jp/contests/${contest}/submit` });
-      return;
-    }
     if (!handleErrorWithCfAndLogin(error, send)) {
       send({ type: "error", text: error instanceof Error ? error.message : "获取提交页面失败" });
     }
@@ -243,14 +246,6 @@ export async function handleSubmitCode(
       }
     } else send({ type: "error", text: result.message });
   } catch (error) {
-    if (error instanceof CfError) {
-      send({ type: "submitResult", submitResult: { success: false, message: "该比赛提交需要 Cloudflare 验证，插件无法自动完成。请在浏览器中打开提交页完成验证后提交。" } });
-      return;
-    }
-    if (error instanceof LoginRequiredError) {
-      send({ type: "submitResult", submitResult: { success: false, message: "提交需要登录，请先设置 AtCoder Cookie 后再试。" } });
-      return;
-    }
     if (!handleErrorWithCfAndLogin(error, send)) {
       send({ type: "submitResult", submitResult: { success: false, message: error instanceof Error ? error.message : "提交失败" } });
     }
@@ -269,42 +264,6 @@ export async function handleFetchSubHistory(contest: string, send: (payload: Rec
   }
 }
 
-export async function handleFetchSubmissionDetail(contest: string, id: string, send: (payload: Record<string, unknown>) => void) {
-  send({ type: "loading", text: `正在获取提交 ${id} 的详细信息...` });
-  try {
-    const detail = await fetchSubmissionDetail(contest, id);
-    send({ type: "submissionDetail", submissionDetail: detail });
-  } catch (error) {
-    if (!handleErrorWithCfAndLogin(error, send)) {
-      send({ type: "error", text: error instanceof Error ? error.message : "获取提交详情失败" });
-    }
-  }
-}
-
-export async function handleFetchStandings(contest: string, send: (payload: Record<string, unknown>) => void) {
-  send({ type: "loading", text: `正在获取 ${contest} 排行榜...` });
-  try {
-    const standings = await fetchStandings(contest);
-    send({ type: "standings", contest, standings });
-  } catch (error) {
-    if (!handleErrorWithCfAndLogin(error, send)) {
-      send({ type: "error", text: error instanceof Error ? error.message : "获取排行榜失败" });
-    }
-  }
-}
-
-export async function handleGetContests(send: (payload: Record<string, unknown>) => void) {
-    send({ type: "loading", text: "正在抓取 AtCoder 首页比赛列表..." });
-    try {
-        const contests = await fetchHomepageContests();
-        send({ type: "contestList", contests });
-    } catch (error) {
-        if (!handleErrorWithCfAndLogin(error, send)) {
-            send({ type: "error", text: error instanceof Error ? error.message : "获取比赛列表失败" });
-        }
-    }
-}
-
 export async function handleExportToCph(problem: AtCoderProblem, send: (payload: Record<string, unknown>) => void) {
   try {
     const payload = buildCphProblem(problem);
@@ -312,7 +271,7 @@ export async function handleExportToCph(problem: AtCoderProblem, send: (payload:
     send({ type: "cphExportResult", success: true, message: "success send to cph" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "fail to send cph";
-    send({ type: "cphExportResult", success: false, message: message });
+    send({ type: "error", success: false, message: message });
   }
 }
 
@@ -416,82 +375,8 @@ function createShowWebview(context: vscode.ExtensionContext) {
   };
 }
 
-export function openContestPanel(context: vscode.ExtensionContext, contest: string) {
-  const panel = vscode.window.createWebviewPanel(
-    "atcoderContest",
-    `AtCoder - ${contest}`,
-    vscode.ViewColumn.One,
-    {
-      enableScripts: true,
-      retainContextWhenHidden: true,
-      localResourceRoots: [
-        vscode.Uri.file(path.join(context.extensionPath, "dist")),
-      ],
-    }
-  );
-
-  const webviewJsPath = vscode.Uri.file(
-    path.join(context.extensionPath, "dist", "webview.js")
-  );
-  const webviewJsSrc = panel.webview.asWebviewUri(webviewJsPath);
-
-  panel.webview.html = getWebviewContent(webviewJsSrc, "contest", contest);
-
-  const sendToWebview = (payload: Record<string, unknown>) => {
-    panel.webview.postMessage(payload);
-  };
-
-  panel.webview.onDidReceiveMessage(
-    (message: IncomingMessage) => { runCommand(message, context, sendToWebview); },
-    undefined,
-    context.subscriptions
-  );
-
-  context.subscriptions.push(panel);
-}
-
-export function openSubmissionPanel(context: vscode.ExtensionContext, contest: string, id: string) {
-  const panel = vscode.window.createWebviewPanel(
-    "atcoderSubmission",
-    `提交 ${id} - ${contest}`,
-    vscode.ViewColumn.One,
-    {
-      enableScripts: true,
-      retainContextWhenHidden: true,
-      localResourceRoots: [
-        vscode.Uri.file(path.join(context.extensionPath, "dist")),
-      ],
-    }
-  );
-
-  const webviewJsPath = vscode.Uri.file(
-    path.join(context.extensionPath, "dist", "webview.js")
-  );
-  const webviewJsSrc = panel.webview.asWebviewUri(webviewJsPath);
-
-  panel.webview.html = getWebviewContent(webviewJsSrc, "submission", contest, id);
-
-  const sendToWebview = (payload: Record<string, unknown>) => {
-    panel.webview.postMessage(payload);
-  };
-
-  panel.webview.onDidReceiveMessage(
-    (message: IncomingMessage) => { runCommand(message, context, sendToWebview); },
-    undefined,
-    context.subscriptions
-  );
-
-  context.subscriptions.push(panel);
-}
-
 export async function activate(context: vscode.ExtensionContext) {
   log.info("Extension is now active!");
-
-  setStaleCookieHandler(() => {
-    // vscode.window.showWarningMessage(
-    //   "检测到 AtCoder Cookie 可能已过期：已临时使用无 Cookie 访问公开页面。如需提交/报名等登录功能，请重新登录并更新 Cookie。"
-    // );
-  });
 
   try {
     const cookie = await context.secrets.get("atcoderCookie");
@@ -504,12 +389,6 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(registerSetAtCoderCookie(context));
     context.subscriptions.push(
       vscode.commands.registerCommand("extension.showWebview", createShowWebview(context))
-    );
-    context.subscriptions.push(
-      vscode.window.registerWebviewViewProvider(
-        AtCoderViewProvider.viewType,
-        new AtCoderViewProvider(context)
-      )
     );
   } catch (error) {
     log.error("Failed to activate extension:", error);

@@ -32,59 +32,15 @@ export interface SubmissionRecord {
   status: string;
 }
 
-export interface Standing {
-  rank: number;
-  user: string;
-  score: string;
-}
-
-export interface HomepageContest {
-  id: string;
-  title: string;
-  start: string;
-  category: "active" | "upcoming" | "recent" | "daily";
-}
-
-export interface JudgeStatus {
-  status: string;
-  cnt: number;
-}
-
-export interface JudgeSet {
-  name: string;
-  score: string;
-  maxScore: string;
-  statuses: JudgeStatus[];
-  caseName: string[];
-  cases?: Array<{ name: string; status: string }>;
-}
-
-export interface SubmissionDetail {
-  id: string;
-  contest: string;
-  task: string;
-  taskScreenName: string;
-  time: string;
-  status: string;
-  score: string;
-  language: string;
-  code: string;
-  codeLength?: string;
-  execTime?: string;
-  memory?: string;
-  judgeSets?: JudgeSet[];
-}
-
 export interface WebviewMessage {
   type?: string;
-  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest' | 'copyMarkdown' | 'sendCph' | 'fetchSubmitPage' | 'submitCode' | 'fetchSubmissionHistory' | 'fetchSubmissionDetail' | 'openSubmission' | 'fetchStandings' | 'getContests' | 'openContest';
+  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest' | 'copyMarkdown' | 'sendCph' | 'fetchSubmitPage' | 'submitCode' | 'fetchSubmissionHistory';
   statusMessage?: string;
   text?: string;
   success?: boolean;
   message?: string;
   contest?: string;
   task?: string;
-  id?: string;
   taskScreenName?: string;
   languageId?: string;
   sourceCode?: string;
@@ -101,17 +57,12 @@ export interface WebviewMessage {
   registrationMessage?: string;
   rated?: boolean;
   Rated?: boolean;
-  announcement?: string;
-  title?: string;
   submitTasks?: Array<{ value: string; label: string }>;
   languages?: Array<{ id: string; label: string }>;
   csrfToken?: string;
   submitResult?: SubmitResult;
   statuses?: Record<string, string>;
   submissions?: SubmissionRecord[];
-  contests?: HomepageContest[];
-  standings?: Standing[];
-  submissionDetail?: SubmissionDetail;
 }
 
 export interface VSCodeAPI {
@@ -123,9 +74,6 @@ export interface VSCodeAPI {
 declare global {
   interface Window {
     acquireVsCodeApi: () => VSCodeAPI;
-    __ATCODER_MODE__?: "editor" | "sidebar" | "contest" | "submission";
-    __ATCODER_INIT_CONTEST__?: string;
-    __ATCODER_SUBMISSION_ID__?: string;
   }
 }
 

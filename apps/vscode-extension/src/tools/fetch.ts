@@ -103,37 +103,22 @@ const BROWSER_HEADERS = {
 
 let sessionCookie = "";
 
-let staleCookieNotified = false;
-let staleCookieHandler: (() => void) | null = null;
-
-export function setStaleCookieHandler(handler: (() => void) | null): void {
-	staleCookieHandler = handler;
-}
-
-function notifyStaleCookie(): void {
-	if (staleCookieHandler && !staleCookieNotified) {
-		staleCookieNotified = true;
-		staleCookieHandler();
-	}
-}
-
 export function setSessionCookie(cookie: string): void {
 	console.log(`[setSessionCookie] 设置 Cookie: ${cookie ? cookie.substring(0, 40) + "..." : "清空"}`);
 	sessionCookie = cookie;
-	staleCookieNotified = false;
 }
 
 export function getSessionCookie(): string {
 	return sessionCookie;
 }
 
-export function getHeaders(withCookie = true): Record<string, string> {
+export function getHeaders(): Record<string, string> {
 	const headers: Record<string, string> = { ...BROWSER_HEADERS };
-	if (withCookie && sessionCookie) {
+	if (sessionCookie) {
 		headers["Cookie"] = sessionCookie;
 		console.log(`[getHeaders] 已注入 Cookie: ${sessionCookie.substring(0, 40)}...`);
 	} else {
-		console.log(`[getHeaders] 未注入 Cookie`);
+		console.log(`[getHeaders] 未设置 Cookie`);
 	}
 	return headers;
 }
@@ -294,41 +279,24 @@ function handleResponse(
 	});
 }
 
-export function fetchText(url: string, opts?: { withCookie?: boolean }): Promise<string> {
-	const withCookie = opts?.withCookie ?? true;
-	if (withCookie && sessionCookie) {
-		return fetchTextOnce(url, true).catch((error) => {
-			if (error instanceof CfError) {
-				console.log(`[fetchText] 带 Cookie 请求触发 Cloudflare，改用无 Cookie 重试: ${url}`);
-				return fetchTextOnce(url, false).then((body) => {
-					notifyStaleCookie();
-					return body;
-				});
-			}
-			throw error;
-		});
-	}
-	return fetchTextOnce(url, withCookie);
-}
-
-function fetchTextOnce(url: string, withCookie: boolean): Promise<string> {
+export function fetchText(url: string): Promise<string> {
 	const logPrefix = `[fetchText]`;
 
 	const savedProxy = saveProxyEnv();
 
 	function restoreProxy() { restoreProxyEnv(savedProxy); }
 
-	console.log(`${logPrefix} 开始请求`, url, withCookie ? `Cookie: ${sessionCookie ? sessionCookie.substring(0, 25) + "..." : "无"}` : "无 Cookie(降级)");
+	console.log(`${logPrefix} 开始请求`, url, `Cookie: ${sessionCookie ? sessionCookie.substring(0, 25) + "..." : "无"}`);
 	return new Promise((resolve, reject) => {
 		const client = url.startsWith("https") ? https : http;
 		const req = client.get(
 			url,
 			{
-				headers: getHeaders(withCookie),
+				headers: getHeaders(),
 				agent: getDirectAgent(url),
 			},
 			(res) => {
-				handleResponse(url, res, savedProxy, resolve, reject, (u) => fetchTextOnce(u, withCookie), logPrefix);
+				handleResponse(url, res, savedProxy, resolve, reject, fetchText);
 			}
 		);
 		req.on("error", (err: Error) => {
@@ -403,30 +371,6 @@ export async function fetchSubStatus(contest: string): Promise<Map<string, strin
 	return now;
 }
 
-function stripHtmlTags(value: string): string {
-	return value
-		.replace(/<[^>]+>/g, "")
-		.replace(/&amp;/g, "&")
-		.replace(/&lt;/g, "<")
-		.replace(/&gt;/g, ">")
-		.replace(/&quot;/g, '"')
-		.replace(/&#39;/g, "'")
-		.replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
-		.replace(/&nbsp;/gi, " ")
-		.replace(/\s+/g, " ")
-		.trim();
-}
-
-function splitRowCells(rowHtml: string): string[] {
-	const cells: string[] = [];
-	const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-	let match: RegExpExecArray | null;
-	while ((match = cellRegex.exec(rowHtml)) !== null) {
-		cells.push(match[1]);
-	}
-	return cells;
-}
-
 export async function fetchSubmitHistory(contest: string): Promise<SubRecord[]> {
 	const html = await fetchText(`https://atcoder.jp/contests/${contest}/submissions/me`);
 	const records: SubRecord[] = [];
@@ -434,28 +378,26 @@ export async function fetchSubmitHistory(contest: string): Promise<SubRecord[]> 
 	let rowMatch: RegExpExecArray | null;
 	for (; (rowMatch = reg.exec(html)) !== null;) {
 		const rowHtml = rowMatch[1];
-		const cells = splitRowCells(rowHtml);
-		if (cells.length < 7) continue;
+		const timeMatch = rowHtml.match(/<td[^>]*class="text-center"[^>]*>([\s\S]*?)<\/td>/i);
+		if (!timeMatch) continue;
+		const time = timeMatch[1].trim().replace(/<[^>]+>/g, "");
 
-		const timeMatch = cells[0].match(/<time[^>]*>([^<]+)<\/time>/i);
-		const time = timeMatch ? timeMatch[1].trim() : stripHtmlTags(cells[0]);
-		if (!time) continue;
-
-		const taskLinkMatch = cells[1].match(/href="[^"]*\/tasks\/([^"#?]+)"[^>]*>([\s\S]*?)<\/a>/i);
+		const taskLinkMatch = rowHtml.match(/href="\/contests\/[^/]+\/tasks\/([^"#?]+)"[^>]*>([^<]+)</i);
 		if (!taskLinkMatch) continue;
 		const taskScreenName = taskLinkMatch[1];
-		const task = stripHtmlTags(taskLinkMatch[2]);
+		const task = taskLinkMatch[2].trim();
 
-		const language = stripHtmlTags(cells[3]);
+		const langMatch = rowHtml.match(/<td[^>]*class="text-center"[^>]*>[\s\S]*?<\/td>\s*<td[^>]*>([^<]*)<\/td>/i);
+		const language = langMatch ? langMatch[1].trim() : "";
 
-		const scoreMatch = cells[4].match(/(\d+)/);
+		const scoreMatch = rowHtml.match(/<td[^>]*class="text-right"[^>]*>\s*(\d+)\s*<\/td>/i);
 		const score = scoreMatch ? scoreMatch[1] : "0";
 
-		const statusMatch = cells[6].match(/<span[^>]*class=(["'])[^"']*\blabel\b[^'"]*\1[^>]*>\s*([^<]+)\s*<\/span>/i);
+		const statusMatch = rowHtml.match(/<span[^>]*class=(["'])[^"']*\blabel\b[^"']*\1[^>]*>\s*([^<]+)\s*<\/span>/i);
 		if (!statusMatch) continue;
 		const status = statusMatch[2].trim();
 
-		const detailMatch = rowHtml.match(/href="\/contests\/[^/]+\/submissions\/(\d+)"/i);
+		const detailMatch = rowHtml.match(/<a[^>]*href="\/contests\/[^/]+\/submissions\/(\d+)"[^>]*>/i);
 		if (!detailMatch) continue;
 		const id = detailMatch[1];
 
@@ -463,3 +405,4 @@ export async function fetchSubmitHistory(contest: string): Promise<SubRecord[]> 
 	}
 	return records;
 }
+

@@ -16,15 +16,14 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:extension.showWebview",
-    "onView:atcoderHelper.webviewView"
+    "onCommand:extension.showWebview"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "extension.showWebview",
-        "title": "AtCoder Helper（编辑器）"
+        "title": "AtCoder"
       },
       {
         "command": "extension.setDeeplApiKey",
@@ -34,25 +33,7 @@
         "command": "extension.setAtCoderCookie",
         "title": "Set AtCoder Login Cookie"
       }
-    ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "atcoder-helper-container",
-          "title": "AtCoder Helper",
-          "icon": "media/atcoder.svg"
-        }
-      ]
-    },
-    "views": {
-      "atcoder-helper-container": [
-        {
-          "type": "webview",
-          "id": "atcoderHelper.webviewView",
-          "name": "AtCoder Helper"
-        }
-      ]
-    }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "pnpm run build",
