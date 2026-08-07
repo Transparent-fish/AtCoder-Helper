@@ -1,4 +1,4 @@
-import { fetchText, fetchTextPost, CfError } from "./fetch";
+import { fetchText, fetchTextPost } from "./fetch";
 
 export interface LanguageOption {
     id: string;
@@ -46,7 +46,7 @@ function parseOptions(html: string): Array<{ value: string; label: string }> {
     const results: Array<{ value: string; label: string }> = [];
     const optionRegex = /<option[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/gi;
     let m: RegExpExecArray | null;
-    for (; (m = optionRegex.exec(html)) !== null;) {
+    for (;(m = optionRegex.exec(html)) !== null;) {
         const value = m[1];
         if (value) results.push({ value, label: decodeHtmlEntities(m[2].trim()) });
     }
@@ -65,11 +65,6 @@ export async function fetchSubmitPage(contest: string): Promise<SubmitPage> {
     const url = `https://atcoder.jp/contests/${contest}/submit`;
     const html = await fetchText(url);
 
-    const captchaMarkers = ["cf-turnstile", "hcaptcha", "g-recaptcha", "challenge-platform", "turnstile"];
-    if (captchaMarkers.some((m) => html.includes(m))) {
-        throw new CfError(url);
-    }
-
     const csrfMatch = html.match(/name="csrf_token"[^>]*value="([^"]*)"/i);
     const csrfToken = csrfMatch ? csrfMatch[1] : "";
 
@@ -82,10 +77,6 @@ export async function fetchSubmitPage(contest: string): Promise<SubmitPage> {
     if (langOptions.length === 0) {
         const allOptions = parseOptions(html);
         langOptions = allOptions.filter(o => /^\d+$/.test(o.value));
-    }
-
-    if (!csrfToken || (tasks.length === 0 && langOptions.length === 0)) {
-        throw new CfError(url);
     }
 
     const seen = new Set<string>();

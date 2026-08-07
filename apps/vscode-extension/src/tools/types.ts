@@ -4,7 +4,6 @@ export interface IncomingMessage {
 	command?: string;
 	contest?: string;
 	task?: string;
-	id?: string;
 	taskScreenName?: string;
 	languageId?: string;
 	sourceCode?: string;
@@ -34,21 +33,3 @@ export interface SubStatus {
 	status?: string;
 }
 
-export interface SubmissionTaskInfo {
-	name: string;
-	status: string;
-}
-
-export interface SubmissionInfo {
-	id: string;
-	contest: string;
-	userName: string;
-	taskId: string;
-	taskTitle: string;
-	language: string;
-	time: string;
-	memory: string;
-	TotStatus: string;
-	SubTaskStatus: SubmissionTaskInfo[];
-	code: string;
-}
