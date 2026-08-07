@@ -1,0 +1,21 @@
+## Feat
+
+☐ 代码提交 — 复用 handleSubmitCode，命令如 extension.submitCode
+
+☐ 报名比赛 — 复用 `handleRegistration`，命令如 `extension.registerContest`（入参 contest/rated）
+
+☐ 查看比赛 — 复用 `openContestPanel`，命令如 `extension.viewContest`（入参 contest，打开 ContestApp 面板）
+
+☐ 发送到 CPH — 复用 `handleExportToCph`，命令如 `extension.sendToCph`（入参 problem）
+
+☐ 翻译 — 复用 `handleTranslate`，命令如 `extension.translate`（入参 payload/targetLang/mode）
+
+☐ 设置 Cookie — 已有 `extension.setAtCoderCookie`，评估是否保留/改名
+
+☐ 设置 DeepL API Key — 已有 `extension.setDeeplApiKey`，评估是否保留/改名
+
+☐ `package.json` contributes.commands / activationEvents 同步更新；涉及 `tools/command.ts` 消息路由评估（命令 → 消息复用 or 新路径）
+
+## Refactor
+
+✔ 提取 handle 系列命令，简化 extension.ts @started(26-08-06 19:28) @done(26-08-06 19:53) @lasted(25m42s)
