@@ -29,6 +29,30 @@ export async function fetchContest(contest: string): Promise<ContestPage> {
     return { contest, title, url, signed, csrfToken, Rated };
 }
 
+function decodeAnnouncementEntities(text: string): string {
+    return text
+        .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+        .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)))
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, "&");
+}
+
+export async function fetchContestAnnouncement(contest: string): Promise<string> {
+    const url = `https://atcoder.jp/posts/${contest}_en`;
+    try {
+        let html = await fetchText(url);
+        html = html.replace(/<img[^>]*>/g, '');
+        const match = html.match(/class="panel-body blog-post"[^>]*>([\s\S]*?)<\/div>/i);
+        if (!match) return "";
+        return decodeAnnouncementEntities(match[1]).trim();
+    } catch {
+        return "";
+    }
+}
+
 export async function signedUpContest(contest: string, csrfToken: string, rated?: boolean): Promise<{ success: boolean; message: string }> {
     const step1Url = `https://atcoder.jp/contests/${contest}/register`;
     const step2Url = `https://atcoder.jp/contests/${contest}/rated_register`;

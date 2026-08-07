@@ -13,4 +13,6 @@ node_modules/
 .DS_Store
 .swc
 .vsix
-DEEP.md
+ToDo.md
+memory.md
+issue.md

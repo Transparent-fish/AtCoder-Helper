@@ -336,7 +336,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
           </div>
         )}
         <div className="p-3 border-b border-[var(--vscode-panel-border)] space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Input
               ref={inputRef}
               value={contest}
@@ -614,7 +614,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                   <div className="text-[13px] font-semibold">{problem.title}</div>
                   <div className="text-[12px] opacity-60">{problem.url}</div>
                 </div>
-                <div className="flex gap-2 items-center">
+                <div className="flex flex-wrap gap-2 items-center">
                   <Button onClick={doTranslate} disabled={translating} size="sm" className="h-[26px] text-[11px]">
                     {translating ? "翻译中..." : "翻译"}
                   </Button>
