@@ -15,6 +15,10 @@ export class AtCoderViewProvider implements vscode.WebviewViewProvider {
 
     constructor(private readonly context: vscode.ExtensionContext) {}
 
+    public postMessage(payload: Record<string, unknown>): void {
+        this.webviewView?.webview.postMessage(payload);
+    }
+
     resolveWebviewView(
         webviewView: vscode.WebviewView,
         _context: vscode.WebviewViewResolveContext,

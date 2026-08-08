@@ -49,7 +49,6 @@ const SidebarApp: React.FC = () => {
     const [cookieInput, setCookieInput] = React.useState("");
     const currentContestRef = React.useRef<string | null>(null);
     currentContestRef.current = currentContest;
-    const pendingCookieChange = React.useRef(false);
 
     const fetchContests = () => {
         setLoadingList(true);
@@ -64,14 +63,12 @@ const SidebarApp: React.FC = () => {
             return;
         }
         const finalVal = val.startsWith("REVEL_SESSION=") ? val : `REVEL_SESSION=${val}`;
-        pendingCookieChange.current = true;
         setCookieInput("");
         setStatus("Cookie 已保存");
         vscode.postMessage({ command: "setCookie", text: finalVal });
     };
 
     const handleCookieClear = () => {
-        pendingCookieChange.current = true;
         vscode.postMessage({ command: "setCookie", text: "" });
         setStatus("Cookie 已清除");
     };
@@ -109,18 +106,22 @@ const SidebarApp: React.FC = () => {
             if (message.type === "loading" || message.type === "update") {
                 setStatus(message.text ?? "");
             }
-            if (message.type === "cookieStatus") {
-                const next = message.hasCookie ?? false;
-                if (pendingCookieChange.current) {
-                    pendingCookieChange.current = false;
-                    if (next) {
-                        setStatus("Cookie 已保存，正在刷新...");
-                        fetchContests();
-                        if (currentContestRef.current) {
-                            fetchHistory(currentContestRef.current);
-                        }
+            if (message.type === "cookieChanged") {
+                if (typeof message.hasCookie === "boolean") {
+                    setHasCookie(message.hasCookie);
+                    if (message.hasCookie) {
+                        setShowLogin(false);
+                        setCookieInput("");
                     }
                 }
+                setStatus("Cookie 已更新，正在刷新...");
+                fetchContests();
+                if (currentContestRef.current) {
+                    fetchHistory(currentContestRef.current);
+                }
+            }
+            if (message.type === "cookieStatus") {
+                const next = message.hasCookie ?? false;
                 setHasCookie(next);
                 if (next) {
                     setShowLogin(false);

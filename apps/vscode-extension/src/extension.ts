@@ -6,6 +6,12 @@ import { IncomingMessage } from "./tools/types";
 import { getWebviewContent } from "./tools/webview";
 import { AtCoderViewProvider } from "./viewProvider";
 
+let sidebarViewProvider: AtCoderViewProvider | undefined;
+
+export function notifyCookieChanged(hasCookie: boolean): void {
+    sidebarViewProvider?.postMessage({ type: "cookieChanged", hasCookie });
+}
+
 const log = {
   info: (...args: unknown[]) => {
     console.log("[Extension]", ...args);
@@ -79,12 +85,14 @@ function registerSetAtCoderCookie(context: vscode.ExtensionContext) {
       if (choice === "自动修复") {
         await context.secrets.store("atcoderCookie", fix);
         setSessionCookie(fix);
+        notifyCookieChanged(true);
         vscode.window.showInformationMessage("AtCoder Cookie 已保存并自动修复格式");
       }
       return;
     }
     await context.secrets.store("atcoderCookie", trimmed);
     setSessionCookie(trimmed);
+    notifyCookieChanged(true);
     vscode.window.showInformationMessage("AtCoder Cookie 已保存");
   });
 }
@@ -212,10 +220,11 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
       vscode.commands.registerCommand("extension.showWebview", createShowWebview(context))
     );
+    sidebarViewProvider = new AtCoderViewProvider(context);
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(
         AtCoderViewProvider.viewType,
-        new AtCoderViewProvider(context)
+        sidebarViewProvider
       )
     );
   } catch (error) {

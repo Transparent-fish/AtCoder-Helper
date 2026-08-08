@@ -8,7 +8,7 @@ import { buildCphProblem, sendToCph } from "./cph";
 import { fetchStandings } from "./standings";
 import { fetchHomepageContests } from "./homepage";
 import { fetchSubmissionDetail } from "./submission";
-import { pullSubmitStatu } from "../extension";
+import { pullSubmitStatu, notifyCookieChanged } from "../extension";
 
 export function handleErrorWithCfAndLogin(error: unknown, send: (payload: Record<string, unknown>) => void): boolean {
     if (error instanceof CfError) {
@@ -143,6 +143,7 @@ export async function handleSetCookie(
         setSessionCookie(cookie);
         vscode.window.showInformationMessage("AtCoder Cookie 已保存");
         send({ type: "cookieStatus", hasCookie: true, statusMessage: "✅ Cookie 保存成功" });
+        notifyCookieChanged(true);
     } else {
         await context.secrets.delete("atcoderCookie");
         setSessionCookie("");
