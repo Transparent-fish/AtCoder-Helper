@@ -164,10 +164,6 @@ export async function handleRegistration(contest: string, rated: boolean | undef
             send({ type: "registrationStatus", signed: true, registrationMessage: "已报名，无需重复操作" });
             return;
         }
-        if (!page.csrfToken) {
-            send({ type: "registrationStatus", signed: false, registrationMessage: "报名已截止或无法获取报名信息" });
-            return;
-        }
         const result = await signedUpContest(contest, page.csrfToken, rated);
         send({ type: "registrationStatus", signed: result.success, registrationMessage: result.message });
     } catch (error) {
