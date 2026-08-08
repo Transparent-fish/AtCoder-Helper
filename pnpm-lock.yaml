@@ -28,13 +28,13 @@ importers:
         version: 8.57.1
       postcss-loader:
         specifier: ^8.1.1
-        version: 8.2.1(postcss@8.5.16)(typescript@5.9.3)(webpack@5.108.4)
+        version: 8.2.1(postcss@8.5.25)(typescript@5.9.3)(webpack@5.108.4)
       prettier:
         specifier: ^3.1.0
         version: 3.9.5
       turbo:
-        specifier: ^1.10.16
-        version: 1.13.4
+        specifier: ^2.9.14
+        version: 2.9.14
       typescript:
         specifier: ^5.3.2
         version: 5.9.3
@@ -77,7 +77,7 @@ importers:
         version: 1.125.0
       '@types/webpack':
         specifier: ^5.28.0
-        version: 5.28.5(postcss@8.5.16)(webpack-cli@5.1.4)
+        version: 5.28.5(postcss@8.5.25)(webpack-cli@5.1.4)
       '@vscode/test-electron':
         specifier: ^2.3.8
         version: 2.5.2
@@ -95,7 +95,7 @@ importers:
         version: 10.8.2
       postcss-loader:
         specifier: ^8.1.1
-        version: 8.2.1(postcss@8.5.16)(typescript@5.9.3)(webpack@5.108.4)
+        version: 8.2.1(postcss@8.5.25)(typescript@5.9.3)(webpack@5.108.4)
       style-loader:
         specifier: ^3.3.3
         version: 3.3.4(webpack@5.108.4)
@@ -104,7 +104,7 @@ importers:
         version: 9.6.2(typescript@5.9.3)(webpack@5.108.4)
       webpack:
         specifier: ^5.89.0
-        version: 5.108.4(postcss@8.5.16)(webpack-cli@5.1.4)
+        version: 5.108.4(postcss@8.5.25)(webpack-cli@5.1.4)
       webpack-cli:
         specifier: ^5.1.4
         version: 5.1.4(webpack@5.108.4)
@@ -116,7 +116,7 @@ importers:
         version: 20.19.43
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+        version: 8.5.1(postcss@8.5.25)(typescript@5.9.3)
       typescript:
         specifier: ^5.3.2
         version: 5.9.3
@@ -134,10 +134,10 @@ importers:
         version: 18.3.7(@types/react@18.3.31)
       autoprefixer:
         specifier: ^10.4.16
-        version: 10.5.2(postcss@8.5.16)
+        version: 10.5.2(postcss@8.5.25)
       postcss:
-        specifier: ^8.4.31
-        version: 8.5.16
+        specifier: ^8.5.18
+        version: 8.5.25
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -149,7 +149,7 @@ importers:
         version: 3.4.19
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+        version: 8.5.1(postcss@8.5.25)(typescript@5.9.3)
       typescript:
         specifier: ^5.3.2
         version: 5.9.3
@@ -183,16 +183,16 @@ importers:
         version: 18.3.7(@types/react@18.3.31)
       autoprefixer:
         specifier: ^10.4.16
-        version: 10.5.2(postcss@8.5.16)
+        version: 10.5.2(postcss@8.5.25)
       postcss:
-        specifier: ^8.4.31
-        version: 8.5.16
+        specifier: ^8.5.18
+        version: 8.5.25
       tailwindcss:
         specifier: ^3.3.5
         version: 3.4.19
       tsup:
         specifier: ^7.2.0
-        version: 7.3.0(postcss@8.5.16)(typescript@5.9.3)
+        version: 7.3.0(postcss@8.5.25)(typescript@5.9.3)
       typescript:
         specifier: ^5.2.2
         version: 5.9.3
@@ -1500,6 +1500,54 @@ packages:
       '@textlint/ast-node-types': 15.7.1
     dev: true
 
+  /@turbo/darwin-64@2.9.14:
+    resolution: {integrity: sha512-t7QiPflaEyBE4oayeZtSmu4mEfjgIrcNlNNl1z1dmIVPqEdtA7+CfTf8d7KXsOGPh6aNgWjKxyvQg9uGfDQF+A==}
+    cpu: [x64]
+    os: [darwin]
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  /@turbo/darwin-arm64@2.9.14:
+    resolution: {integrity: sha512-d23147mC9BsCPA9mJ0h/ubcpbRgcJBXbcG3+Vq7YLhjz3IXuvQsJ1UXH8f4MD76ZjJ4m/E4aRdJV+MW88CDfbw==}
+    cpu: [arm64]
+    os: [darwin]
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  /@turbo/linux-64@2.9.14:
+    resolution: {integrity: sha512-P3ZKB5tuUDdDQWuAsACGUR1qv9W7BNWxdxqVJ0kZNuNNPRaVYTPPikLcp79+GiEcW3npsR+KyP38lnQiBc5aSA==}
+    cpu: [x64]
+    os: [linux]
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  /@turbo/linux-arm64@2.9.14:
+    resolution: {integrity: sha512-ZRTlzcUMrrPv9ZuDzRF9n60Ym13bKeG9jDB8WjxyLhWNzV+AJQN+zdpIk3NJYf2zQsGUm1mNar2P0elRzLw25g==}
+    cpu: [arm64]
+    os: [linux]
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  /@turbo/windows-64@2.9.14:
+    resolution: {integrity: sha512-exanwN6sIduZwykYeiTQj8kCmOhazP5WOz3bvXMcYtjhL6Z3iRWLewKrXCBq0bqwSP3iBMb/AerRCnHI4lx46A==}
+    cpu: [x64]
+    os: [win32]
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  /@turbo/windows-arm64@2.9.14:
+    resolution: {integrity: sha512-fVdCsnmYoKICsycbWuuGp6Jvi51/3G/UluFWuAUCvR8PIW5IJkAk5BM9UF8PSm0Q2IphWHFZjYEgjHsh3B9y/g==}
+    cpu: [arm64]
+    os: [win32]
+    requiresBuild: true
+    dev: true
+    optional: true
+
   /@types/estree@1.0.9:
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
     dev: true
@@ -1564,12 +1612,12 @@ packages:
     resolution: {integrity: sha512-0icm/ZQAaism87P0ekHqi4/Ju9du+Tm0RUW+y7vqRsxY2cY0FNRX1nAnaW7nT6npPt2tfHiheZ55Zm9UhqonFA==}
     dev: true
 
-  /@types/webpack@5.28.5(postcss@8.5.16)(webpack-cli@5.1.4):
+  /@types/webpack@5.28.5(postcss@8.5.25)(webpack-cli@5.1.4):
     resolution: {integrity: sha512-wR87cgvxj3p6D0Crt1r5avwqffqPXUkNlnQ1mjU93G7gCuFjufZR4I6j8cz5g1F1tTYpfOOFvly+cmIQwL9wvw==}
     dependencies:
       '@types/node': 20.19.43
       tapable: 2.3.3
-      webpack: 5.108.4(postcss@8.5.16)(webpack-cli@5.1.4)
+      webpack: 5.108.4(postcss@8.5.25)(webpack-cli@5.1.4)
     transitivePeerDependencies:
       - '@minify-html/node'
       - '@swc/core'
@@ -1986,7 +2034,7 @@ packages:
       webpack: 5.x.x
       webpack-cli: 5.x.x
     dependencies:
-      webpack: 5.108.4(postcss@8.5.16)(webpack-cli@5.1.4)
+      webpack: 5.108.4(postcss@8.5.25)(webpack-cli@5.1.4)
       webpack-cli: 5.1.4(webpack@5.108.4)
     dev: true
 
@@ -1997,7 +2045,7 @@ packages:
       webpack: 5.x.x
       webpack-cli: 5.x.x
     dependencies:
-      webpack: 5.108.4(postcss@8.5.16)(webpack-cli@5.1.4)
+      webpack: 5.108.4(postcss@8.5.25)(webpack-cli@5.1.4)
       webpack-cli: 5.1.4(webpack@5.108.4)
     dev: true
 
@@ -2012,7 +2060,7 @@ packages:
       webpack-dev-server:
         optional: true
     dependencies:
-      webpack: 5.108.4(postcss@8.5.16)(webpack-cli@5.1.4)
+      webpack: 5.108.4(postcss@8.5.25)(webpack-cli@5.1.4)
       webpack-cli: 5.1.4(webpack@5.108.4)
     dev: true
 
@@ -2182,7 +2230,7 @@ packages:
       gulp-header: 1.8.12
     dev: true
 
-  /autoprefixer@10.5.2(postcss@8.5.16):
+  /autoprefixer@10.5.2(postcss@8.5.25):
     resolution: {integrity: sha512-rD5t5DwOjJdmSORcTq64j8MawTC+tbQ+HHqjR4NDumamy/ambn1UJrlKL+KdwujWxMkFjPM3pPHOEA9tl4767Q==}
     engines: {node: ^10 || ^12 || >=14}
     hasBin: true
@@ -2193,7 +2241,7 @@ packages:
       caniuse-lite: 1.0.30001803
       fraction.js: 5.3.4
       picocolors: 1.1.1
-      postcss: 8.5.16
+      postcss: 8.5.25
       postcss-value-parser: 4.2.0
     dev: true
 
@@ -2650,7 +2698,7 @@ packages:
       postcss-modules-values: 4.0.0(postcss@8.5.16)
       postcss-value-parser: 4.2.0
       semver: 7.8.5
-      webpack: 5.108.4(postcss@8.5.16)(webpack-cli@5.1.4)
+      webpack: 5.108.4(postcss@8.5.25)(webpack-cli@5.1.4)
     dev: true
 
   /css-select@5.2.2:
@@ -4365,7 +4413,7 @@ packages:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
     dev: true
 
-  /minimizer-webpack-plugin@5.6.1(postcss@8.5.16)(webpack@5.108.4):
+  /minimizer-webpack-plugin@5.6.1(postcss@8.5.25)(webpack@5.108.4):
     resolution: {integrity: sha512-DoeAZz8Q1C1znwsUzej1fdoi4jCf7/+Em27ouLqfK/+3m8G+D7yDhUwrc3CNhjSzGUN1kn7Iv4sWmjflQHenpw==}
     engines: {node: '>= 10.13.0'}
     peerDependencies:
@@ -4410,10 +4458,10 @@ packages:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
-      postcss: 8.5.16
+      postcss: 8.5.25
       schema-utils: 4.3.3
       terser: 5.49.0
-      webpack: 5.108.4(postcss@8.5.16)(webpack-cli@5.1.4)
+      webpack: 5.108.4(postcss@8.5.25)(webpack-cli@5.1.4)
     dev: true
 
   /minipass@7.1.3:
@@ -4487,8 +4535,8 @@ packages:
       thenify-all: 1.6.0
     dev: true
 
-  /nanoid@3.3.15:
-    resolution: {integrity: sha512-y7Wygv/7mEOvxTuEQDB8StXdMRBWf1kR/tlhAzBRUFkB2jfcLOAxO/SHmOO2zgz1pVgK29/kyupn059/bCHdjA==}
+  /nanoid@3.3.16:
+    resolution: {integrity: sha512-bzlKTyNJ7+LdGIIwy8ijFpIqEQIvafahV7eYykJ8Cvh42EdJeODoJ6gUJXpQJvej1BddH8OqTXZNE/KfbWAu8Q==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
     dev: true
@@ -4839,29 +4887,29 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
-  /postcss-import@15.1.0(postcss@8.5.16):
+  /postcss-import@15.1.0(postcss@8.5.25):
     resolution: {integrity: sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       postcss: ^8.0.0
     dependencies:
-      postcss: 8.5.16
+      postcss: 8.5.25
       postcss-value-parser: 4.2.0
       read-cache: 1.0.0
       resolve: 1.22.12
     dev: true
 
-  /postcss-js@4.1.0(postcss@8.5.16):
+  /postcss-js@4.1.0(postcss@8.5.25):
     resolution: {integrity: sha512-oIAOTqgIo7q2EOwbhb8UalYePMvYoIeRY2YKntdpFQXNosSu3vLrniGgmH9OKs/qAkfoj5oB3le/7mINW1LCfw==}
     engines: {node: ^12 || ^14 || >= 16}
     peerDependencies:
       postcss: ^8.4.21
     dependencies:
       camelcase-css: 2.0.1
-      postcss: 8.5.16
+      postcss: 8.5.25
     dev: true
 
-  /postcss-load-config@4.0.2(postcss@8.5.16):
+  /postcss-load-config@4.0.2(postcss@8.5.25):
     resolution: {integrity: sha512-bSVhyJGL00wMVoPUzAVAnbEoWyqRxkjv64tUl427SKnPrENtq6hJwUojroMz2VB+Q1edmi4IfrAPpami5VVgMQ==}
     engines: {node: '>= 14'}
     peerDependencies:
@@ -4874,11 +4922,11 @@ packages:
         optional: true
     dependencies:
       lilconfig: 3.1.3
-      postcss: 8.5.16
+      postcss: 8.5.25
       yaml: 2.9.0
     dev: true
 
-  /postcss-load-config@6.0.1(jiti@1.21.7)(postcss@8.5.16):
+  /postcss-load-config@6.0.1(jiti@1.21.7)(postcss@8.5.25):
     resolution: {integrity: sha512-oPtTM4oerL+UXmx+93ytZVN82RrlY/wPUV8IeDxFrzIjXOLF1pN+EmKPLbubvKHT2HC20xXsCAH2Z+CKV6Oz/g==}
     engines: {node: '>= 18'}
     peerDependencies:
@@ -4898,10 +4946,10 @@ packages:
     dependencies:
       jiti: 1.21.7
       lilconfig: 3.1.3
-      postcss: 8.5.16
+      postcss: 8.5.25
     dev: true
 
-  /postcss-loader@8.2.1(postcss@8.5.16)(typescript@5.9.3)(webpack@5.108.4):
+  /postcss-loader@8.2.1(postcss@8.5.25)(typescript@5.9.3)(webpack@5.108.4):
     resolution: {integrity: sha512-k98jtRzthjj3f76MYTs9JTpRqV1RaaMhEU0Lpw9OTmQZQdppg4B30VZ74BojuBHt3F4KyubHJoXCMUeM8Bqeow==}
     engines: {node: '>= 18.12.0'}
     peerDependencies:
@@ -4916,9 +4964,9 @@ packages:
     dependencies:
       cosmiconfig: 9.0.2(typescript@5.9.3)
       jiti: 2.7.0
-      postcss: 8.5.16
+      postcss: 8.5.25
       semver: 7.8.5
-      webpack: 5.108.4(postcss@8.5.16)(webpack-cli@5.1.4)
+      webpack: 5.108.4(postcss@8.5.25)(webpack-cli@5.1.4)
     transitivePeerDependencies:
       - typescript
     dev: true
@@ -4964,13 +5012,13 @@ packages:
       postcss: 8.5.16
     dev: true
 
-  /postcss-nested@6.2.0(postcss@8.5.16):
+  /postcss-nested@6.2.0(postcss@8.5.25):
     resolution: {integrity: sha512-HQbt28KulC5AJzG+cZtj9kvKB93CFCdLvog1WFLf1D+xmMvPGlBstkpTEZfK5+AN9hfJocyBFCNiqyS48bpgzQ==}
     engines: {node: '>=12.0'}
     peerDependencies:
       postcss: ^8.2.14
     dependencies:
-      postcss: 8.5.16
+      postcss: 8.5.25
       postcss-selector-parser: 6.1.4
     dev: true
 
@@ -4998,7 +5046,16 @@ packages:
     resolution: {integrity: sha512-vuwillviilfKZsg0VGj5R/YwwcHx4SLsIOI/7K6mQkWx+l5cUHTjj5g0AasTBcyXsbfTgrwsUNmVUb5xVwyPwg==}
     engines: {node: ^10 || ^12 || >=14}
     dependencies:
-      nanoid: 3.3.15
+      nanoid: 3.3.16
+      picocolors: 1.1.1
+      source-map-js: 1.2.1
+    dev: true
+
+  /postcss@8.5.25:
+    resolution: {integrity: sha512-DTPx3RWSSnWyzLxQnlH0rJP+EW5ekl16ZU4/psbIhA0e53kJfdgaN5vKM+xP7yJtXVu+nfdVFmlgFDEKAe4Pyw==}
+    engines: {node: ^10 || ^12 || >=14}
+    dependencies:
+      nanoid: 3.3.16
       picocolors: 1.1.1
       source-map-js: 1.2.1
     dev: true
@@ -5650,7 +5707,7 @@ packages:
     peerDependencies:
       webpack: ^5.0.0
     dependencies:
-      webpack: 5.108.4(postcss@8.5.16)(webpack-cli@5.1.4)
+      webpack: 5.108.4(postcss@8.5.25)(webpack-cli@5.1.4)
     dev: true
 
   /sucrase@3.35.1:
@@ -5724,11 +5781,11 @@ packages:
       normalize-path: 3.0.0
       object-hash: 3.0.0
       picocolors: 1.1.1
-      postcss: 8.5.16
-      postcss-import: 15.1.0(postcss@8.5.16)
-      postcss-js: 4.1.0(postcss@8.5.16)
-      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.16)
-      postcss-nested: 6.2.0(postcss@8.5.16)
+      postcss: 8.5.25
+      postcss-import: 15.1.0(postcss@8.5.25)
+      postcss-js: 4.1.0(postcss@8.5.25)
+      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.25)
+      postcss-nested: 6.2.0(postcss@8.5.25)
       postcss-selector-parser: 6.1.4
       resolve: 1.22.12
       sucrase: 3.35.1
@@ -5890,14 +5947,14 @@ packages:
       picomatch: 4.0.5
       source-map: 0.7.6
       typescript: 5.9.3
-      webpack: 5.108.4(postcss@8.5.16)(webpack-cli@5.1.4)
+      webpack: 5.108.4(postcss@8.5.25)(webpack-cli@5.1.4)
     dev: true
 
   /tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
     dev: true
 
-  /tsup@7.3.0(postcss@8.5.16)(typescript@5.9.3):
+  /tsup@7.3.0(postcss@8.5.25)(typescript@5.9.3):
     resolution: {integrity: sha512-Ja1eaSRrE+QarmATlNO5fse2aOACYMBX+IZRKy1T+gpyH+jXgRrl5l4nHIQJQ1DoDgEjHDTw8cpE085UdBZuWQ==}
     engines: {node: '>=18'}
     deprecated: Breaking node 16
@@ -5922,8 +5979,8 @@ packages:
       execa: 5.1.1
       globby: 11.1.0
       joycon: 3.1.1
-      postcss: 8.5.16
-      postcss-load-config: 4.0.2(postcss@8.5.16)
+      postcss: 8.5.25
+      postcss-load-config: 4.0.2(postcss@8.5.25)
       resolve-from: 5.0.0
       rollup: 4.62.2
       source-map: 0.8.0-beta.0
@@ -5935,7 +5992,7 @@ packages:
       - ts-node
     dev: true
 
-  /tsup@8.5.1(postcss@8.5.16)(typescript@5.9.3):
+  /tsup@8.5.1(postcss@8.5.25)(typescript@5.9.3):
     resolution: {integrity: sha512-xtgkqwdhpKWr3tKPmCkvYmS9xnQK3m3XgxZHwSUjvfTjp7YfXe5tT3GgWi0F2N+ZSMsOeWeZFh7ZZFg5iPhing==}
     engines: {node: '>=18'}
     hasBin: true
@@ -5963,8 +6020,8 @@ packages:
       fix-dts-default-cjs-exports: 1.0.1
       joycon: 3.1.1
       picocolors: 1.1.1
-      postcss: 8.5.16
-      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.16)
+      postcss: 8.5.25
+      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.25)
       resolve-from: 5.0.0
       rollup: 4.62.2
       source-map: 0.7.6
@@ -5993,64 +6050,16 @@ packages:
     engines: {node: '>=0.6.11 <=0.7.0 || >=0.7.3'}
     dev: true
 
-  /turbo-darwin-64@1.13.4:
-    resolution: {integrity: sha512-A0eKd73R7CGnRinTiS7txkMElg+R5rKFp9HV7baDiEL4xTG1FIg/56Vm7A5RVgg8UNgG2qNnrfatJtb+dRmNdw==}
-    cpu: [x64]
-    os: [darwin]
-    requiresBuild: true
-    dev: true
-    optional: true
-
-  /turbo-darwin-arm64@1.13.4:
-    resolution: {integrity: sha512-eG769Q0NF6/Vyjsr3mKCnkG/eW6dKMBZk6dxWOdrHfrg6QgfkBUk0WUUujzdtVPiUIvsh4l46vQrNVd9EOtbyA==}
-    cpu: [arm64]
-    os: [darwin]
-    requiresBuild: true
-    dev: true
-    optional: true
-
-  /turbo-linux-64@1.13.4:
-    resolution: {integrity: sha512-Bq0JphDeNw3XEi+Xb/e4xoKhs1DHN7OoLVUbTIQz+gazYjigVZvtwCvgrZI7eW9Xo1eOXM2zw2u1DGLLUfmGkQ==}
-    cpu: [x64]
-    os: [linux]
-    requiresBuild: true
-    dev: true
-    optional: true
-
-  /turbo-linux-arm64@1.13.4:
-    resolution: {integrity: sha512-BJcXw1DDiHO/okYbaNdcWN6szjXyHWx9d460v6fCHY65G8CyqGU3y2uUTPK89o8lq/b2C8NK0yZD+Vp0f9VoIg==}
-    cpu: [arm64]
-    os: [linux]
-    requiresBuild: true
-    dev: true
-    optional: true
-
-  /turbo-windows-64@1.13.4:
-    resolution: {integrity: sha512-OFFhXHOFLN7A78vD/dlVuuSSVEB3s9ZBj18Tm1hk3aW1HTWTuAw0ReN6ZNlVObZUHvGy8d57OAGGxf2bT3etQw==}
-    cpu: [x64]
-    os: [win32]
-    requiresBuild: true
-    dev: true
-    optional: true
-
-  /turbo-windows-arm64@1.13.4:
-    resolution: {integrity: sha512-u5A+VOKHswJJmJ8o8rcilBfU5U3Y1TTAfP9wX8bFh8teYF1ghP0EhtMRLjhtp6RPa+XCxHHVA2CiC3gbh5eg5g==}
-    cpu: [arm64]
-    os: [win32]
-    requiresBuild: true
-    dev: true
-    optional: true
-
-  /turbo@1.13.4:
-    resolution: {integrity: sha512-1q7+9UJABuBAHrcC4Sxp5lOqYS5mvxRrwa33wpIyM18hlOCpRD/fTJNxZ0vhbMcJmz15o9kkVm743mPn7p6jpQ==}
+  /turbo@2.9.14:
+    resolution: {integrity: sha512-BQqXRr4UoWI3UPFrtznCLykYHxwxWh53iCB57x092jPMjIlW1wnm3N895g5irpiXmnxUhREBB0n6+y8BHhs4nw==}
     hasBin: true
     optionalDependencies:
-      turbo-darwin-64: 1.13.4
-      turbo-darwin-arm64: 1.13.4
-      turbo-linux-64: 1.13.4
-      turbo-linux-arm64: 1.13.4
-      turbo-windows-64: 1.13.4
-      turbo-windows-arm64: 1.13.4
+      '@turbo/darwin-64': 2.9.14
+      '@turbo/darwin-arm64': 2.9.14
+      '@turbo/linux-64': 2.9.14
+      '@turbo/linux-arm64': 2.9.14
+      '@turbo/windows-64': 2.9.14
+      '@turbo/windows-arm64': 2.9.14
     dev: true
 
   /type-check@0.4.0:
@@ -6194,7 +6203,7 @@ packages:
     dependencies:
       '@types/node': 20.19.43
       esbuild: 0.21.5
-      postcss: 8.5.16
+      postcss: 8.5.25
       rollup: 4.62.2
     optionalDependencies:
       fsevents: 2.3.3
@@ -6240,7 +6249,7 @@ packages:
       import-local: 3.2.0
       interpret: 3.1.1
       rechoir: 0.8.0
-      webpack: 5.108.4(postcss@8.5.16)(webpack-cli@5.1.4)
+      webpack: 5.108.4(postcss@8.5.25)(webpack-cli@5.1.4)
       webpack-merge: 5.10.0
     dev: true
 
@@ -6258,7 +6267,7 @@ packages:
     engines: {node: '>=10.13.0'}
     dev: true
 
-  /webpack@5.108.4(postcss@8.5.16)(webpack-cli@5.1.4):
+  /webpack@5.108.4(postcss@8.5.25)(webpack-cli@5.1.4):
     resolution: {integrity: sha512-yur8LyJoeiWh47dErD+Ok7vlbmDsJ3UbbRPAoxbGJ54WpE2y5yVo5G/inUzujnYgw3tPmBRdn+G7PoxXaYC33w==}
     engines: {node: '>=10.13.0'}
     hasBin: true
@@ -6284,7 +6293,7 @@ packages:
       graceful-fs: 4.2.11
       loader-runner: 4.3.2
       mime-db: 1.54.0
-      minimizer-webpack-plugin: 5.6.1(postcss@8.5.16)(webpack@5.108.4)
+      minimizer-webpack-plugin: 5.6.1(postcss@8.5.25)(webpack@5.108.4)
       neo-async: 2.6.2
       schema-utils: 4.3.3
       tapable: 2.3.3
