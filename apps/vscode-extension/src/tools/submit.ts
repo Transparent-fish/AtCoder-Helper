@@ -85,7 +85,7 @@ export async function fetchSubmitPage(contest: string): Promise<SubmitPage> {
     }
 
     if (!csrfToken || (tasks.length === 0 && langOptions.length === 0)) {
-        throw new CfError(url);
+        throw new Error("无法获取提交页面：比赛可能已结束，或提交页面结构发生了变化。");
     }
 
     const seen = new Set<string>();

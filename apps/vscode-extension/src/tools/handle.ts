@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { AtCoderProblem, fetchAtCoderProblem, fetchAtCoderTasks } from "../atcoder";
-import { CfError, ProxyError, LoginRequiredError, setSessionCookie, fetchSubStatus, fetchSubmitHistory } from "./fetch";
+import { CfError, ProxyError, LoginRequiredError, setSessionCookie, fetchSubStatus, fetchSubmitHistory, getSessionCookie } from "./fetch";
 import { fetchContest, signedUpContest, fetchContestAnnouncement } from "./SignUpContest";
 import { translateTextRaw, translateTextFree } from "./deepl";
 import { fetchSubmitPage, submitCodeWithRedirect } from "./submit";
@@ -180,11 +180,21 @@ export async function handleFetchSubmitPage(contest: string, send: (payload: Rec
             return;
         }
         if (error instanceof LoginRequiredError) {
-            send({ type: "submitPageError", message: "提交需要登录，请先设置 AtCoder Cookie 后再试。", url: `https://atcoder.jp/contests/${contest}/submit` });
+            send({
+                type: "submitPageError",
+                message: getSessionCookie()
+                    ? "提交需要登录，请检查 AtCoder Cookie 是否有效或已过期；若提交页触发 Cloudflare 验证，请用浏览器打开完成验证。"
+                    : "提交需要登录，请先设置 AtCoder Cookie 后再试。",
+                url: `https://atcoder.jp/contests/${contest}/submit`,
+            });
             return;
         }
         if (!handleErrorWithCfAndLogin(error, send)) {
-            send({ type: "error", text: error instanceof Error ? error.message : "获取提交页面失败" });
+            send({
+                type: "submitPageError",
+                message: error instanceof Error ? error.message : "获取提交页面失败",
+                url: `https://atcoder.jp/contests/${contest}/submit`,
+            });
         }
     }
 }
@@ -223,7 +233,15 @@ export async function handleSubmitCode(
             return;
         }
         if (error instanceof LoginRequiredError) {
-            send({ type: "submitResult", submitResult: { success: false, message: "提交需要登录，请先设置 AtCoder Cookie 后再试。" } });
+            send({
+                type: "submitResult",
+                submitResult: {
+                    success: false,
+                    message: getSessionCookie()
+                        ? "提交需要登录，请检查 AtCoder Cookie 是否有效或已过期；若提交页触发 Cloudflare 验证，请用浏览器打开完成验证。"
+                        : "提交需要登录，请先设置 AtCoder Cookie 后再试。",
+                },
+            });
             return;
         }
         if (!handleErrorWithCfAndLogin(error, send)) {
