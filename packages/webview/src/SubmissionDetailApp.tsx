@@ -75,6 +75,10 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
                 setStatus("AtCoder 触发 Cloudflare 验证，请在浏览器中打开查看");
                 setIsLoading(false);
             }
+            if (message.type === "loginRequired") {
+                setStatus("需要登录 AtCoder 账号，请在侧边栏设置 Cookie 后再试");
+                setIsLoading(false);
+            }
         };
         window.addEventListener("message", handleMessage);
         return () => window.removeEventListener("message", handleMessage);

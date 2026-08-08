@@ -206,6 +206,10 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
                 setIsLoading(false);
                 setStatus("AtCoder 触发 Cloudflare 验证，插件无法直接访问，请在浏览器中完成验证");
             }
+            if (message.type === "loginRequired") {
+                setIsLoading(false);
+                setStatus("需要登录 AtCoder 账号，请在侧边栏设置 Cookie 后再试");
+            }
             if (message.type === "problem") {
                 setProblem(message.problem ?? null);
                 setStatus(`已加载题面：${message.problem?.title ?? ""}`);

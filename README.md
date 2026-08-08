@@ -114,7 +114,7 @@ pnpm dev
 
 1. 浏览器登录 https://atcoder.jp
 2. F12 → Application → Cookies → 复制 `REVEL_SESSION` 的 Value
-3. VS Code 中 `Ctrl+Shift+P` → `Set AtCoder Login Cookie`
+3. VS Code 中 `Ctrl+Shift+P` → `Set AtCoder Login Cookie`（或在侧边栏底部登录区域粘贴保存）
 
 ### 设置 DeepL API Key（用于翻译）
 

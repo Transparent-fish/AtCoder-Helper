@@ -29,12 +29,6 @@ export function handleErrorWithCfAndLogin(error: unknown, send: (payload: Record
         return true;
     }
     if (error instanceof LoginRequiredError) {
-        const openLogin = "打开 AtCoder 登录";
-        const setCookie = "设置 Cookie";
-        vscode.window.showErrorMessage(error.message, openLogin, setCookie).then((choice) => {
-            if (choice === openLogin) vscode.env.openExternal(vscode.Uri.parse("https://atcoder.jp/login"));
-            if (choice === setCookie) vscode.commands.executeCommand("extension.setAtCoderCookie");
-        });
         send({ type: "loginRequired" });
         return true;
     }
