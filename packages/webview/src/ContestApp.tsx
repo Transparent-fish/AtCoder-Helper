@@ -480,7 +480,7 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
 
             {!isLoading && tasks.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-[12px] opacity-60">
-                    正在加载 {contest} 的题目...
+                    {status || `暂无 ${contest} 的题目`}
                 </div>
             )}
 

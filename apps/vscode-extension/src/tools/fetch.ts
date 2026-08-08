@@ -204,6 +204,24 @@ function restoreProxyEnv(saved: Record<string, string | undefined>) {
 	}
 }
 
+function extractContestFromUrl(url: string): string | null {
+	const match = url.match(/\/contests\/([^/]+)/i);
+	return match ? match[1] : null;
+}
+
+function isContestStarted(contest: string): Promise<boolean | null> {
+	const url = `https://atcoder.jp/contests/${contest}`;
+	return fetchTextOnce(url, false)
+		.then((html) => {
+			const match = html.match(/var startTime = moment\("([^"]+)"\)/i);
+			if (!match) return null;
+			const start = new Date(match[1]).getTime();
+			if (Number.isNaN(start)) return null;
+			return start <= Date.now();
+		})
+		.catch(() => null);
+}
+
 function handleResponse(
 	url: string,
 	res: http.IncomingMessage,
@@ -271,13 +289,28 @@ function handleResponse(
 		}
 		if (res.statusCode !== 200) {
 			if (res.statusCode === 404) {
-				if (sessionCookie) {
-					console.log(`${logPrefix} 404 但有 Cookie，可能 Cookie 无效`);
-					reject(new Error(`访问失败 (404)。Cookie 可能无效或已过期，请重新登录 AtCoder 获取新的 REVEL_SESSION`));
+				if (!sessionCookie) {
+					console.log(`${logPrefix} 404 且无 Cookie，需要登录`);
+					reject(new Error(`访问失败 (404)。题目不存在或需要登录，请先设置 AtCoder Cookie。`));
 					return;
 				}
-				console.log(`${logPrefix} 404 且无 Cookie，需要登录`);
-				reject(new Error(`访问失败 (404)。题目不存在或需要登录，请先设置 AtCoder Cookie。`));
+				const rejectCookieInvalid = () => {
+					console.log(`${logPrefix} 404 但有 Cookie，可能 Cookie 无效`);
+					reject(new Error(`访问失败 (404)。Cookie 可能无效或已过期，请重新登录 AtCoder 获取新的 REVEL_SESSION`));
+				};
+				const contest = extractContestFromUrl(url);
+				if (!contest) {
+					rejectCookieInvalid();
+					return;
+				}
+				void isContestStarted(contest).then((started) => {
+					if (started === false) {
+						console.log(`${logPrefix} 404 且比赛未开始，题目未公开: ${url}`);
+						reject(new Error(`访问失败 (404)。比赛「${contest}」尚未开始，题目还未公开，请等待开赛后再试。`));
+					} else {
+						rejectCookieInvalid();
+					}
+				});
 				return;
 			}
 			console.log(`${logPrefix} 非 200 状态码:`, res.statusCode);
