@@ -1,5 +1,6 @@
 import * as http from "http";
 import { AtCoderProblem } from "../atcoder";
+import { t } from "./i18n";
 
 export interface CphTestCase {
     input: string;
@@ -21,10 +22,7 @@ export interface CphProblem {
 
 export class CphNotRunningError extends Error {
     constructor() {
-        super(
-            "未检测到 CPH 插件（localhost:27121 无响应）。\n" +
-            "请安装并启用 Competitive Programming Helper 扩展后重试。"
-        );
+        super(t("cph.notRunning"));
         this.name = "CphNotRunningError";
     }
 }
@@ -66,7 +64,7 @@ export function sendToCph(problem: CphProblem): Promise<void> {
                     if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
                         resolve();
                     } else {
-                        reject(new Error(`CPH 返回状态码 ${res.statusCode}`));
+                        reject(new Error(t("cph.httpError", { status: res.statusCode })));
                     }
                 });
             }
@@ -75,7 +73,7 @@ export function sendToCph(problem: CphProblem): Promise<void> {
             if ((err as NodeJS.ErrnoException).code === "ECONNREFUSED") {
                 reject(new CphNotRunningError());
             } else {
-                reject(new Error(`连接 CPH 失败: ${err.message}`));
+                reject(new Error(t("cph.connectionFailed", { msg: err.message })));
             }
         });
         req.write(body);

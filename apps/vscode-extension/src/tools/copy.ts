@@ -1,4 +1,5 @@
 import { AtCoderProblem } from "../atcoder";
+import { t } from "./i18n";
 
 function decodeEntities(text: string): string {
     return text
@@ -57,36 +58,36 @@ export function copyMarkdown(problem: AtCoderProblem): string {
     parts.push("");
 
     if (problem.statement) {
-        parts.push("### 题目描述");
+        parts.push(t("md.statement"));
         parts.push(htmlToText(problem.statement));
         parts.push("");
     }
 
     if (problem.constraints) {
-        parts.push("### 约束");
+        parts.push(t("md.constraints"));
         parts.push(htmlToText(problem.constraints));
         parts.push("");
     }
 
     if (problem.inputFormat) {
-        parts.push("### 输入格式");
+        parts.push(t("md.inputFormat"));
         parts.push(htmlToText(problem.inputFormat));
         parts.push("");
     }
 
     if (problem.outputFormat) {
-        parts.push("### 输出格式");
+        parts.push(t("md.outputFormat"));
         parts.push(htmlToText(problem.outputFormat));
         parts.push("");
     }
 
     if (problem.samples && problem.samples.length > 0) {
         for (const sample of problem.samples) {
-            parts.push(`### 样例 ${sample.index}`);
-            parts.push("输入");
+            parts.push(t("md.sample", { index: sample.index }));
+            parts.push(t("md.inputLabel"));
             parts.push("```\n" + sample.input + "\n```");
             parts.push("");
-            parts.push("输出");
+            parts.push(t("md.outputLabel"));
             parts.push("```\n" + sample.output + "\n```");
             parts.push("");
         }

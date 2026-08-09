@@ -126,6 +126,7 @@ declare global {
     __ATCODER_MODE__?: "editor" | "sidebar" | "contest" | "submission";
     __ATCODER_INIT_CONTEST__?: string;
     __ATCODER_SUBMISSION_ID__?: string;
+    __ATCODER_LOCALE__?: string;
   }
 }
 

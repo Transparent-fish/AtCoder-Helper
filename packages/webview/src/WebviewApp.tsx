@@ -3,6 +3,7 @@ import { Button, Card, Input, Spinner } from "@template/ui";
 import "./styles.css";
 
 import { useVSCode } from "./VSCodeProvider";
+import { useI18n } from "./i18n";
 import type { WebviewMessage, ContestProblem, SampleCase, SubmitResult } from "./types";
 import { HtmlContent, TranslatedBlock } from "./components/HtmlContent";
 
@@ -14,11 +15,12 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
   title = "VSCode Extension",
 }) => {
   const vscode = useVSCode();
+  const { t, nodes } = useI18n();
   const [contest, setContest] = React.useState("");
   const [tasks, setTasks] = React.useState<Array<{ label: string; value: string; url: string; status?: string }>>([]);
   const [selectedTask, setSelectedTask] = React.useState<string>("");
   const [problem, setProblem] = React.useState<ContestProblem | null>(null);
-  const [status, setStatus] = React.useState("输入比赛代号并加载题目列表");
+  const [status, setStatus] = React.useState(t("ui.enterContestHint"));
   const [isLoading, setIsLoading] = React.useState(false);
   const [cfUrl, setCfUrl] = React.useState<string | null>(null);
   const [translated, setTranslated] = React.useState<Record<string, string> | null>(null);
@@ -48,44 +50,44 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
 
   const loadContest = async (nextContest: string) => {
     setIsLoading(true);
-    setStatus(`正在加载 ${nextContest} 的题目...`);
+    setStatus(t("status.loadingContest", { contest: nextContest }));
     vscode.postMessage({ command: "loadContest", contest: nextContest });
   };
 
   const loadProblem = async (nextContest: string, task: string) => {
     setIsLoading(true);
-    setStatus(`正在抓取 ${nextContest}/${task} 的题面...`);
+    setStatus(t("status.fetchingProblem", { contest: nextContest, task }));
     setTranslated(translatedCache[task] ?? null);
     vscode.postMessage({ command: "loadProblem", contest: nextContest, task });
   };
 
   const handleRegister = () => {
     setRegistrationMessage(null);
-    setStatus(`正在报名 ${contest} ...`);
+    setStatus(t("status.registration", { contest }));
     vscode.postMessage({ command: "registerContest", contest, rated: isRated });
   };
 
   const doCopyMarkdown = () => {
     if (!problem) return;
     vscode.postMessage({ command: "copyMarkdown", problem });
-    setStatus("正在复制...");
+    setStatus(t("status.copying"));
   };
 
   const doTranslate = () => {
     if (!problem) return;
     setTranslating(true);
-    setStatus("正在翻译...");
+    setStatus(t("status.translating"));
     const texts: Record<string, string> = {};
-    if (problem.statement) texts["题目描述"] = problem.statement;
-    if (problem.constraints) texts["约束"] = problem.constraints;
-    if (problem.inputFormat) texts["输入格式"] = problem.inputFormat;
-    if (problem.outputFormat) texts["输出格式"] = problem.outputFormat;
+    if (problem.statement) texts[t("text.problemStatement")] = problem.statement;
+    if (problem.constraints) texts[t("text.constraints")] = problem.constraints;
+    if (problem.inputFormat) texts[t("text.inputFormat")] = problem.inputFormat;
+    if (problem.outputFormat) texts[t("text.outputFormat")] = problem.outputFormat;
     vscode.postMessage({ command: "translate", payload: texts, targetLang: "ZH", translationMode } as WebviewMessage);
   };
 
   const doExportToCph = () => {
     if (!problem) return;
-    setStatus("正在导出到 CPH...");
+    setStatus(t("status.exportingCph"));
     vscode.postMessage({ command: "sendCph", problem });
   };
 
@@ -94,7 +96,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
     setSubmitTasks([]);
     setSubmitLanguages([]);
     setSourceCode("");
-    setStatus("正在获取提交页面...");
+    setStatus(t("status.fetchingSubmitPage"));
     vscode.postMessage({ command: "fetchSubmitPage", contest });
   };
 
@@ -106,14 +108,14 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
 
   const handleFetchSubmissionHistory = () => {
     setLoadingHistory(true);
-    setStatus("正在获取提交记录...");
+    setStatus(t("status.fetchingHistory"));
     vscode.postMessage({ command: "fetchSubmissionHistory", contest } as unknown as WebviewMessage);
   };
 
   const handleSubmitCode = () => {
     if (!selectedSubmitTask || !selectedSubmitLanguage || !sourceCode.trim()) return;
     setSubmitResult(null);
-    setStatus("正在提交代码...");
+    setStatus(t("status.submitting"));
     vscode.postMessage({
       command: "submitCode",
       contest,
@@ -144,7 +146,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
         setSelectedTask("");
         setProblem(null);
         setRated(true);
-        setStatus(`已加载 ${nextTasks.length} 道题目`);
+        setStatus(t("status.tasksLoaded", { count: nextTasks.length }));
         setIsLoading(false);
       }
       if (message.type === "contestInfo") {
@@ -152,37 +154,37 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
       }
       if (message.type === "problem") {
         setProblem(message.problem ?? null);
-        setStatus(`已加载题面：${message.problem?.title ?? ""}`);
+        setStatus(t("status.problemLoaded", { title: message.problem?.title ?? "" }));
         setIsLoading(false);
       }
       if (message.type === "loading" || message.type === "update") {
-        setStatus(message.text ?? "加载中...");
+        setStatus(message.text ?? t("status.loading"));
       }
       if (message.type === "error") {
-        setStatus(message.text ?? "操作失败");
+        setStatus(message.text ?? t("err.operationFailed"));
         setIsLoading(false);
         setTranslating(false);
       }
       if (message.type === "cphExportResult") {
         const ok = message.success === true;
-        setStatus(ok ? (message.message ?? "已发送到 CPH") : (message.message ?? "导出到 CPH 失败"));
+        setStatus(ok ? (message.message ?? t("status.sentToCph")) : (message.message ?? t("status.cphExportFailed")));
         setIsLoading(false);
       }
       if (message.type === "cf_challenge") {
         setCfUrl(message.url ?? null);
         setIsLoading(false);
-        setStatus("AtCoder 触发 Cloudflare 验证，插件无法直接访问，请在浏览器中使用");
+        setStatus(t("status.cfChallenge"));
       }
       if (message.type === "loginRequired") {
         setIsLoading(false);
         setShowSettings(true);
-        setStatus("需要登录 AtCoder 才能查看。请在浏览器中登录，然后将 Cookie 粘贴到设置中");
+        setStatus(t("status.loginRequired"));
       }
       if (message.type === "translation") {
         setTranslatedCache(prev => ({ ...prev, [selectedTaskRef.current]: message.translated ?? {} }));
         setTranslated(message.translated ?? null);
         setTranslating(false);
-        setStatus("翻译完成");
+        setStatus(t("status.translationDone"));
       }
       if (message.type === "cookieStatus") {
         setHasCookie(message.hasCookie ?? false);
@@ -198,7 +200,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
       if (message.type === "registrationStatus") {
         setSigned(message.signed ?? false);
         setRegistrationMessage(message.registrationMessage ?? null);
-        setStatus(message.registrationMessage ?? (message.signed ? "报名成功" : "报名失败"));
+        setStatus(message.registrationMessage ?? (message.signed ? t("status.registrationSuccess") : t("status.registrationFail")));
         setIsLoading(false);
       }
       if (message.type === "submitPage") {
@@ -211,16 +213,16 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
           setSelectedSubmitLanguage(message.languages[0].id);
         }
         setShowSubmitPanel(true);
-        setStatus("已获取提交页面信息");
+        setStatus(t("status.submitPageReady"));
         setIsLoading(false);
       }
       if (message.type === "submitResult") {
         setSubmitResult(message.submitResult ?? null);
         setIsLoading(false);
         if (message.submitResult?.success) {
-          setStatus("代码提交成功");
+          setStatus(t("status.submitSuccess"));
         } else {
-          setStatus(message.submitResult?.message ?? "提交失败");
+          setStatus(message.submitResult?.message ?? t("status.submitFailed"));
         }
       }
       if (message.type === "statusUpdate") {
@@ -236,7 +238,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
         }
         setTasks(prev => prev.map(t => ({ ...t, status: latest[t.value] })));
         setLoadingHistory(false);
-        setStatus(`已获取 ${(m.submissions ?? []).length} 条提交记录`);
+        setStatus(t("status.historyLoaded", { count: (m.submissions ?? []).length }));
         setShowSubmissionHistory(true);
       }
     };
@@ -247,7 +249,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
 
   function getStatusColor() {
     if (isLoading) return "bg-yellow-500";
-    if (status.includes("失败") || status.includes("Error")) return "bg-red-500";
+    if (/失败|failed|error/i.test(status)) return "bg-red-500";
     if (tasks.length > 0 || problem) return "bg-green-500";
     return "bg-gray-500";
   }
@@ -264,11 +266,11 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
           <span className="text-[13px] select-none">{title}</span>
         </div>
         <div className="ml-auto flex items-center gap-1">
-          {hasCookie && <span className="w-2 h-2 rounded-full bg-green-500" title="已登录 AtCoder" />}
+          {hasCookie && <span className="w-2 h-2 rounded-full bg-green-500" title={t("cookie.loggedIn")} />}
           <button
             onClick={() => setShowSettings(!showSettings)}
             className="text-[11px] opacity-60 hover:opacity-100 px-1 py-0.5 rounded hover:bg-[var(--vscode-toolbar-hoverBackground)]"
-            title="设置"
+            title={t("ui.settings")}
           >
             ⚙
           </button>
@@ -278,17 +280,48 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
       <div className="flex-1 flex flex-col bg-[var(--vscode-editor-background)] text-[var(--vscode-editor-foreground)]">
         {showSettings && (
           <div className="p-3 border-b border-[var(--vscode-panel-border)] space-y-2 bg-[var(--vscode-textBlockQuote-background)]">
-            <div className="text-[12px] font-semibold">AtCoder 登录 Cookie</div>
+            <div className="text-[12px] font-semibold">{t("cookie.title")}</div>
             <div className="space-y-1 text-[11px] opacity-70 leading-relaxed">
-              <div>AtCoder 仅需 <code className="bg-[var(--vscode-textBlockQuote-background)] px-1 rounded">REVEL_SESSION</code> 一个 Cookie 即可登录。</div>
-              <div className="font-medium mt-1">获取步骤：</div>
+              <div>
+                {nodes(t("cookie.onlyNeedRevel"), {
+                  code: <code className="bg-[var(--vscode-textBlockQuote-background)] px-1 rounded">REVEL_SESSION</code>,
+                })}
+              </div>
+              <div className="font-medium mt-1">{t("cookie.steps")}</div>
               <ol className="list-decimal pl-4 space-y-0.5">
-                <li>在浏览器中打开 <span className="underline cursor-pointer" onClick={() => vscode.postMessage({ command: "openBrowser", url: "https://atcoder.jp/login" })}>https://atcoder.jp/login</span> 并登录</li>
-                <li>按 <kbd className="px-1 rounded border border-[var(--vscode-input-border,#6e7681)]">F12</kbd> 打开开发者工具</li>
-                <li>切换到 <b>Application</b>（Chrome）或 <b>存储</b>（Edge）标签页</li>
-                <li>左侧找到 <b>Cookies</b> → <b>https://atcoder.jp</b></li>
-                <li>找到名为 <code className="bg-[var(--vscode-textBlockQuote-background)] px-1 rounded">REVEL_SESSION</code> 的行，双击 <b>Value</b> 列全选复制</li>
-                <li>粘贴到下方输入框（无需手动加前缀，插件会自动补全）</li>
+                <li>
+                  {nodes(t("cookie.step1"), {
+                    link: (
+                      <span className="underline cursor-pointer" onClick={() => vscode.postMessage({ command: "openBrowser", url: "https://atcoder.jp/login" })}>
+                        https://atcoder.jp/login
+                      </span>
+                    ),
+                  })}
+                </li>
+                <li>
+                  {nodes(t("cookie.step2"), {
+                    key: <kbd className="px-1 rounded border border-[var(--vscode-input-border,#6e7681)]">F12</kbd>,
+                  })}
+                </li>
+                <li>
+                  {nodes(t("cookie.step3"), {
+                    application: <b>{t("cookie.chromeApp")}</b>,
+                    storage: <b>{t("cookie.edgeStorage")}</b>,
+                  })}
+                </li>
+                <li>
+                  {nodes(t("cookie.step4"), {
+                    cookies: <b>Cookies</b>,
+                    site: <b>https://atcoder.jp</b>,
+                  })}
+                </li>
+                <li>
+                  {nodes(t("cookie.step5"), {
+                    code: <code className="bg-[var(--vscode-textBlockQuote-background)] px-1 rounded">REVEL_SESSION</code>,
+                    value: <b>Value</b>,
+                  })}
+                </li>
+                <li>{t("cookie.step6")}</li>
               </ol>
             </div>
             <div className="flex items-center gap-2">
@@ -296,40 +329,40 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                 type="password"
                 value={cookieInput}
                 onChange={(e) => setCookieInput(e.target.value)}
-                placeholder={hasCookie ? "已保存 Cookie，输入新值可覆盖" : "粘贴 REVEL_SESSION 的 Value"}
+                placeholder={hasCookie ? t("cookie.placeholderHas") : t("cookie.placeholderEmpty")}
                 className="flex-1 h-[28px] text-[12px] px-2 rounded border border-[var(--vscode-input-border,#6e7681)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)]"
               />
               <Button
                 onClick={() => {
                   const val = cookieInput.trim();
                   if (!val) {
-                    setStatus("请先复制 REVEL_SESSION 的值再保存");
+                    setStatus(t("cookie.pasteFirst"));
                     return;
                   }
                   const finalVal = val.startsWith("REVEL_SESSION=") ? val : `REVEL_SESSION=${val}`;
                   setCookieInput("");
                   setHasCookie(true);
-                  setStatus("Cookie 已保存");
+                  setStatus(t("cookie.saved"));
                   vscode.postMessage({ command: "setCookie", text: finalVal });
                 }}
                 size="sm"
                 className="h-[28px] text-[11px]"
                 disabled={!cookieInput.trim()}
               >
-                保存
+                {t("ui.save")}
               </Button>
               {hasCookie && (
                   <Button
                     onClick={() => {
                       vscode.postMessage({ command: "setCookie", text: "" });
                       setHasCookie(false);
-                      setStatus("Cookie 已清除");
+                      setStatus(t("cookie.cleared"));
                     }}
                     size="sm"
                     variant="secondary"
                     className="h-[28px] text-[11px]"
                   >
-                    清除
+                    {t("ui.clear")}
                   </Button>
               )}
             </div>
@@ -342,12 +375,12 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               value={contest}
               onChange={(e) => setContest(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && void loadContest(contest)}
-              placeholder="输入比赛代码，如 abc345"
+              placeholder={t("ui.contestPlaceholder")}
               className="flex-1 h-[28px] text-[12px] bg-white! text-[#000000]! placeholder:text-[#000000]! placeholder:opacity-100! shadow-none!"
               disabled={isLoading}
             />
             <Button onClick={() => void loadContest(contest)} disabled={isLoading} className="h-[28px] text-[12px]">
-              加载题目
+              {t("ui.loadTasks")}
             </Button>
             <Button
               onClick={handleRegister}
@@ -355,9 +388,9 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               variant={signed ? "secondary" : "primary"}
               size="sm"
               className="h-[28px] text-[12px]"
-              title={!hasCookie ? "请先设置 AtCoder Cookie" : signed ? "已报名" : "报名比赛"}
+              title={!hasCookie ? t("ui.setCookieFirst") : signed ? t("ui.registered") : t("ui.registerButton")}
             >
-              {signed ? "已报名" : "报名比赛"}
+              {signed ? t("ui.registered") : t("ui.registerButton")}
             </Button>
             <Button
               onClick={() => {
@@ -371,9 +404,9 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               variant={showSubmitPanel ? "secondary" : "primary"}
               size="sm"
               className="h-[28px] text-[12px]"
-              title="提交代码"
+              title={t("ui.submit")}
             >
-              提交代码
+              {t("ui.submit")}
             </Button>
             <Button
               onClick={() => {
@@ -387,9 +420,9 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               variant={showSubmissionHistory ? "secondary" : "primary"}
               size="sm"
               className="h-[28px] text-[12px]"
-              title="提交记录"
+              title={t("ui.submitHistoryTitle")}
             >
-              提交记录
+              {t("ui.submitHistoryTitle")}
             </Button>
           </div>
           {Rated && (
@@ -400,7 +433,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                 onChange={(e) => setIsRated(e.target.checked)}
                 className="w-3 h-3"
               />
-              评级报名
+              {t("ui.ratedRegistration")}
             </label>
           )}
           {registrationMessage && (
@@ -415,25 +448,25 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
           <div className="border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-textBlockQuote-background)]">
             <div className="p-3 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-[12px] font-semibold">提交代码到 {contest}</div>
+                <div className="text-[12px] font-semibold">{t("ui.submitTo", { contest })}</div>
                 <Button
                   size="sm"
                   variant="secondary"
                   onClick={() => { setShowSubmitPanel(false); setSubmitResult(null); }}
                   className="h-[24px] text-[11px]"
                 >
-                  关闭
+                  {t("ui.close")}
                 </Button>
               </div>
 
               {submitTasks.length === 0 ? (
                 <Button onClick={handleFetchSubmitPage} disabled={isLoading} size="sm" className="h-[28px] text-[12px]">
-                  {isLoading ? "获取中..." : "获取提交页面"}
+                  {isLoading ? t("ui.fetching") : t("ui.fetchSubmitPage")}
                 </Button>
               ) : (
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <div className="text-[11px] font-semibold">题目</div>
+                    <div className="text-[11px] font-semibold">{t("ui.task")}</div>
                     <select
                       value={selectedSubmitTask}
                       onChange={(e) => setSelectedSubmitTask(e.target.value)}
@@ -446,7 +479,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                   </div>
 
                   <div className="space-y-1">
-                    <div className="text-[11px] font-semibold">语言</div>
+                    <div className="text-[11px] font-semibold">{t("ui.language")}</div>
                     <select
                       value={selectedSubmitLanguage}
                       onChange={(e) => setSelectedSubmitLanguage(e.target.value)}
@@ -459,11 +492,11 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                   </div>
 
                   <div className="space-y-1">
-                    <div className="text-[11px] font-semibold">源代码</div>
+                    <div className="text-[11px] font-semibold">{t("ui.sourceCode")}</div>
                     <textarea
                       value={sourceCode}
                       onChange={(e) => setSourceCode(e.target.value)}
-                      placeholder="在此粘贴或输入代码..."
+                      placeholder={t("ui.codePlaceholder")}
                       rows={8}
                       className="w-full text-[12px] p-2 rounded border border-[var(--vscode-input-border,#6e7681)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none focus:border-[var(--vscode-focusBorder)] resize-vertical font-mono"
                     />
@@ -476,7 +509,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                       size="sm"
                       className="h-[28px] text-[12px]"
                     >
-                      {isLoading ? "提交中..." : "提交"}
+                      {isLoading ? t("ui.submitting") : t("ui.submit")}
                     </Button>
                     <Button
                       onClick={handleFetchSubmitPage}
@@ -485,13 +518,13 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                       variant="secondary"
                       className="h-[28px] text-[12px]"
                     >
-                      刷新
+                      {t("ui.refresh")}
                     </Button>
                   </div>
 
                   {submitResult && (
                     <div className={`text-[12px] p-2 rounded ${submitResult.success ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}`}>
-                      <div className="font-semibold mb-1">{submitResult.success ? "提交成功" : "提交失败"}</div>
+                      <div className="font-semibold mb-1">{submitResult.success ? t("ui.submitSuccessTitle") : t("ui.submitFailedTitle")}</div>
                       <div>{submitResult.message}</div>
                       {submitResult.url && (
                         <div className="mt-1">
@@ -500,7 +533,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                             onClick={(e) => { e.preventDefault(); vscode.postMessage({ command: "openBrowser", url: submitResult.url }); }}
                             className="underline"
                           >
-                            查看提交记录
+                            {t("ui.viewSubmissionHistory")}
                           </a>
                         </div>
                       )}
@@ -516,7 +549,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
           <div className="border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-textBlockQuote-background)]">
             <div className="p-3 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-[12px] font-semibold">{contest} 提交记录</div>
+                <div className="text-[12px] font-semibold">{contest} {t("ui.submitHistoryTitle")}</div>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -524,7 +557,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                     disabled={loadingHistory}
                     className="h-[24px] text-[11px]"
                   >
-                    {loadingHistory ? "刷新中..." : "刷新"}
+                    {loadingHistory ? t("ui.refreshing") : t("ui.refresh")}
                   </Button>
                   <Button
                     size="sm"
@@ -532,14 +565,14 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                     onClick={() => { setShowSubmissionHistory(false); }}
                     className="h-[24px] text-[11px]"
                   >
-                    关闭
+                    {t("ui.close")}
                   </Button>
                 </div>
               </div>
 
               {submissionHistory.length === 0 ? (
                 <div className="text-[12px] opacity-60">
-                  {loadingHistory ? "正在获取提交记录..." : "暂无提交记录"}
+                  {loadingHistory ? t("ui.loadingHistory") : t("ui.noHistory")}
                 </div>
               ) : (
                 <div className="space-y-1 max-h-[300px] overflow-y-auto">
@@ -562,7 +595,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                         onClick={(e) => { e.preventDefault(); vscode.postMessage({ command: "openBrowser", url: `https://atcoder.jp/contests/${contest}/submissions/${s.id}` }); }}
                         className="text-[11px] underline opacity-60 hover:opacity-100 flex-shrink-0"
                       >
-                        查看
+                        {t("ui.view")}
                       </a>
                     </div>
                   ))}
@@ -575,7 +608,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {tasks.length > 0 && (
             <Card className="p-3 space-y-2">
-              <div className="text-[13px] font-semibold">题目列表</div>
+              <div className="text-[13px] font-semibold">{t("ui.taskList")}</div>
               <div className="flex flex-wrap gap-2">
                 {tasks.map((task) => (
                   <Button
@@ -616,62 +649,62 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                   <Button onClick={doTranslate} disabled={translating} size="sm" className="h-[26px] text-[11px]">
-                    {translating ? "翻译中..." : "翻译"}
+                    {translating ? t("ui.translating") : t("ui.translate")}
                   </Button>
                   <select
                     value={translationMode}
                     onChange={(e) => setTranslationMode(e.target.value as "api" | "free")}
                     className="h-[26px] text-[11px] px-1 rounded border border-[var(--vscode-input-border,#6e7681)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none"
-                    title="翻译模式"
+                    title={t("ui.translationMode")}
                   >
-                    <option value="free">免费</option>
-                    <option value="api">API</option>
+                    <option value="free">{t("ui.free")}</option>
+                    <option value="api">{t("ui.api")}</option>
                   </select>
                   <Button onClick={doCopyMarkdown} size="sm" variant="secondary" className="h-[26px] text-[11px]">
-                    复制 Markdown
+                    {t("ui.copyMarkdown")}
                   </Button>
-                  <Button onClick={doExportToCph} size="sm" variant="secondary" className="h-[26px] text-[11px]" title="导出到 CPH（需已安装 Competitive Programming Helper）">
-                    导出 CPH
+                  <Button onClick={doExportToCph} size="sm" variant="secondary" className="h-[26px] text-[11px]" title={t("ui.exportCphTitle")}>
+                    {t("ui.exportCph")}
                   </Button>
                 </div>
               </div>
 
               {problem.statement && (
                 <div className="space-y-1">
-                  <div className="text-[12px] font-semibold">题面</div>
+                  <div className="text-[12px] font-semibold">{t("ui.statement")}</div>
                   <HtmlContent html={problem.statement} />
-                  {translated?.["题目描述"] && (
-                    <TranslatedBlock original={problem.statement} translation={translated["题目描述"]} />
+                  {translated?.[t("text.problemStatement")] && (
+                    <TranslatedBlock original={problem.statement} translation={translated[t("text.problemStatement")]} />
                   )}
                 </div>
               )}
 
               {problem.constraints && (
                 <div className="space-y-1">
-                  <div className="text-[12px] font-semibold">约束</div>
+                  <div className="text-[12px] font-semibold">{t("text.constraints")}</div>
                   <HtmlContent html={problem.constraints} />
-                  {translated?.["约束"] && (
-                    <TranslatedBlock original={problem.constraints} translation={translated["约束"]} />
+                  {translated?.[t("text.constraints")] && (
+                    <TranslatedBlock original={problem.constraints} translation={translated[t("text.constraints")]} />
                   )}
                 </div>
               )}
 
               {problem.inputFormat && (
                 <div className="space-y-1">
-                  <div className="text-[12px] font-semibold">输入格式</div>
+                  <div className="text-[12px] font-semibold">{t("text.inputFormat")}</div>
                   <HtmlContent html={problem.inputFormat} />
-                  {translated?.["输入格式"] && (
-                    <TranslatedBlock original={problem.inputFormat} translation={translated["输入格式"]} />
+                  {translated?.[t("text.inputFormat")] && (
+                    <TranslatedBlock original={problem.inputFormat} translation={translated[t("text.inputFormat")]} />
                   )}
                 </div>
               )}
 
               {problem.outputFormat && (
                 <div className="space-y-1">
-                  <div className="text-[12px] font-semibold">输出格式</div>
+                  <div className="text-[12px] font-semibold">{t("text.outputFormat")}</div>
                   <HtmlContent html={problem.outputFormat} />
-                  {translated?.["输出格式"] && (
-                    <TranslatedBlock original={problem.outputFormat} translation={translated["输出格式"]} />
+                  {translated?.[t("text.outputFormat")] && (
+                    <TranslatedBlock original={problem.outputFormat} translation={translated[t("text.outputFormat")]} />
                   )}
                 </div>
               )}
@@ -679,14 +712,14 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
               {problem.samples?.length > 0 ? (
                 problem.samples.map((sample: SampleCase) => (
                   <div key={sample.index} className="space-y-2">
-                    <div className="text-[12px] font-semibold">Sample {sample.index}</div>
+                    <div className="text-[12px] font-semibold">{t("ui.sampleLabel", { index: sample.index })}</div>
                     <div className="rounded bg-[var(--vscode-input-background)] p-2 relative group">
                       <div className="text-[11px] opacity-60 mb-1">Input</div>
                       <pre className="text-[12px] whitespace-pre-wrap break-words">{sample.input}</pre>
                       <button
                         onClick={() => copySampleText(`${sample.index}-in`, sample.input)}
                         className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--vscode-toolbar-hoverBackground)]"
-                        title="复制 Input"
+                        title={t("ui.copyInput")}
                       >
                         {copiedSample[`${sample.index}-in`] ? (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--vscode-editor-foreground)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -701,7 +734,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                       <button
                         onClick={() => copySampleText(`${sample.index}-out`, sample.output)}
                         className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--vscode-toolbar-hoverBackground)]"
-                        title="复制 Output"
+                        title={t("ui.copyOutput")}
                       >
                         {copiedSample[`${sample.index}-out`] ? (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--vscode-editor-foreground)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -714,40 +747,40 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
                 ))
               ) : problem.sampleUrl ? (
                 <div className="flex flex-col items-start gap-2">
-                  <div className="text-[12px] opacity-60">该题目没有内嵌样例，样例在外部链接中。</div>
+                  <div className="text-[12px] opacity-60">{t("ui.sampleExternal")}</div>
                   <Button
                     onClick={() => vscode.postMessage({ command: "openBrowser", url: problem.sampleUrl! })}
                     size="sm"
                     className="h-[26px] text-[11px]"
                   >
-                    查看样例
+                    {t("ui.viewSamples")}
                   </Button>
                 </div>
               ) : (
-                <div className="text-[12px] opacity-60">当前题目没有找到样例。</div>
+                <div className="text-[12px] opacity-60">{t("ui.noSamples")}</div>
               )}
             </Card>
           )}
 
           {!isLoading && tasks.length === 0 && !problem && !cfUrl && (
             <div className="flex flex-col items-center justify-center h-full text-[12px] opacity-60">
-              请输入比赛代号，例如 abc345，然后点击加载题目。
+              {t("ui.enterContestHint")}
             </div>
           )}
 
           {cfUrl && (
             <div className="p-6 flex flex-col items-center justify-center gap-4">
-              <div className="text-[14px] font-medium text-yellow-600">Cloudflare 验证</div>
+              <div className="text-[14px] font-medium text-yellow-600">{t("ui.cfTitle")}</div>
               <div className="text-[12px] opacity-70 text-center max-w-md">
-                <p className="mb-2">AtCoder 触发了 Cloudflare 验证，插件无法直接访问 AtCoder。</p>
-                <p>请直接在浏览器中打开 AtCoder 使用。</p>
+                <p className="mb-2">{t("ui.cfBody1")}</p>
+                <p>{t("ui.cfBody2")}</p>
               </div>
               <div className="flex gap-3 mt-2 flex-wrap justify-center">
                 <Button onClick={() => vscode.postMessage({ command: "openBrowser", url: cfUrl })} className="h-[32px] text-[12px]">
-                  在浏览器中打开
+                  {t("ui.openInBrowser")}
                 </Button>
                 <Button onClick={() => { setCfUrl(null); }} className="h-[32px] text-[12px]">
-                  关闭
+                  {t("ui.close")}
                 </Button>
               </div>
             </div>
@@ -756,7 +789,7 @@ const WebviewApp: React.FC<WebviewAppProps> = ({
           {isLoading && (
             <div className="flex items-center gap-2 text-[12px] opacity-70">
               <Spinner size="sm" />
-              <span>正在抓取数据...</span>
+              <span>{t("ui.fetchingData")}</span>
             </div>
           )}
         </div>
