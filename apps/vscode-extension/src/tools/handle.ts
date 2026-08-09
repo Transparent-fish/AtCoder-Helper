@@ -9,19 +9,20 @@ import { fetchStandings } from "./standings";
 import { fetchHomepageContests } from "./homepage";
 import { fetchSubmissionDetail } from "./submission";
 import { pullSubmitStatu, notifyCookieChanged } from "../extension";
+import { t } from "./i18n";
 
 export function handleErrorWithCfAndLogin(error: unknown, send: (payload: Record<string, unknown>) => void): boolean {
     if (error instanceof CfError) {
-        vscode.window.showErrorMessage(error.message, "在浏览器中打开").then((choice) => {
-            if (choice === "在浏览器中打开") vscode.env.openExternal(vscode.Uri.parse(error.url));
+        vscode.window.showErrorMessage(error.message, t("err.openInBrowser")).then((choice) => {
+            if (choice === t("err.openInBrowser")) vscode.env.openExternal(vscode.Uri.parse(error.url));
         });
         send({ type: "cf_challenge", url: error.url });
         return true;
     }
     if (error instanceof ProxyError) {
-        const fixNoProxy = "设置 NO_PROXY";
-        const fixWsl = "查看 WSL 代理说明";
-        vscode.window.showErrorMessage("代理连接失败，无法访问 AtCoder", fixNoProxy, fixWsl).then((choice) => {
+        const fixNoProxy = t("err.setNoProxy");
+        const fixWsl = t("err.viewWslDoc");
+        vscode.window.showErrorMessage(t("err.proxyFailedTitle"), fixNoProxy, fixWsl).then((choice) => {
             if (choice === fixNoProxy) vscode.env.openExternal(vscode.Uri.parse("https://github.com/anomalyco/opencode/issues"));
             if (choice === fixWsl) vscode.env.openExternal(vscode.Uri.parse("https://learn.microsoft.com/zh-cn/windows/wsl/networking"));
         });
@@ -36,7 +37,7 @@ export function handleErrorWithCfAndLogin(error: unknown, send: (payload: Record
 }
 
 export async function handleContestLoad(contest: string, send: (payload: Record<string, unknown>) => void) {
-    send({ type: "loading", text: `正在抓取 ${contest} 的题目列表...` });
+    send({ type: "loading", text: t("load.contestTasks", { contest }) });
     try {
         const tasks = await fetchAtCoderTasks(contest);
         try {
@@ -48,7 +49,7 @@ export async function handleContestLoad(contest: string, send: (payload: Record<
         }
     } catch (error) {
         if (!handleErrorWithCfAndLogin(error, send)) {
-            send({ type: "error", text: error instanceof Error ? error.message : "抓取题目失败" });
+            send({ type: "error", text: error instanceof Error ? error.message : t("err.contestTasks") });
         }
         return;
     }
@@ -76,40 +77,40 @@ export async function handleTranslate(
         if (translationMode === "free") {
             for (const [key, value] of Object.entries(texts)) {
                 if (typeof value === "string" && value.trim()) {
-                    send({ type: "loading", text: `正在翻译 ${key}...` });
+                    send({ type: "loading", text: t("load.translateItem", { name: key }) });
                     translated[key] = await translateTextFree(value, lang);
                 }
             }
         } else {
             const apiKey = await context.secrets.get("deeplApiKey");
             if (!apiKey) {
-                const set = "设置 API Key";
-                const choice = await vscode.window.showErrorMessage("请先设置 DeepL API Key", set);
+                const set = t("deepl.setKey");
+                const choice = await vscode.window.showErrorMessage(t("deepl.setKeyFirst"), set);
                 if (choice === set) vscode.commands.executeCommand("extension.setDeeplApiKey");
-                send({ type: "error", text: "未设置 DeepL API Key" });
+                send({ type: "error", text: t("deepl.noKey") });
                 return;
             }
             for (const [key, value] of Object.entries(texts)) {
                 if (typeof value === "string" && value.trim()) {
-                    send({ type: "loading", text: `正在翻译 ${key}...` });
+                    send({ type: "loading", text: t("load.translateItem", { name: key }) });
                     translated[key] = await translateTextRaw(value, lang, apiKey);
                 }
             }
         }
         send({ type: "translation", translated });
     } catch (error) {
-        send({ type: "error", text: error instanceof Error ? error.message : "翻译失败" });
+        send({ type: "error", text: error instanceof Error ? error.message : t("err.translate") });
     }
 }
 
 export async function handleProblemLoad(contest: string, task: string, send: (payload: Record<string, unknown>) => void) {
-    send({ type: "loading", text: `正在抓取 ${contest}/${task} 的题面...` });
+    send({ type: "loading", text: t("load.problem", { contest, task }) });
     try {
         const problem = await fetchAtCoderProblem(contest, task);
         send({ type: "problem", problem });
     } catch (error) {
         if (!handleErrorWithCfAndLogin(error, send)) {
-            send({ type: "error", text: error instanceof Error ? error.message : "抓取题面失败" });
+            send({ type: "error", text: error instanceof Error ? error.message : t("err.problem") });
         }
     }
 }
@@ -121,7 +122,7 @@ export async function handleGetCookie(context: vscode.ExtensionContext, send: (p
         type: "cookieStatus",
         hasCookie: !!storedCookie,
         masked,
-        statusMessage: storedCookie ? "✅ Cookie 已加载，可访问需要登录的题目" : "未设置 Cookie",
+        statusMessage: storedCookie ? t("cookie.loaded") : t("cookie.notSet"),
     });
 }
 
@@ -132,59 +133,59 @@ export async function handleSetCookie(
 ) {
     if (cookie) {
         if (!cookie.startsWith("REVEL_SESSION=")) {
-            send({ type: "cookieStatus", hasCookie: false, statusMessage: "❌ Cookie 格式错误，请以 REVEL_SESSION= 开头" });
+            send({ type: "cookieStatus", hasCookie: false, statusMessage: t("cookie.formatError") });
             return;
         }
         if (cookie.length < 20) {
-            send({ type: "cookieStatus", hasCookie: false, statusMessage: "❌ Cookie 值过短，请确认已完整复制 REVEL_SESSION 的值" });
+            send({ type: "cookieStatus", hasCookie: false, statusMessage: t("cookie.tooShort") });
             return;
         }
         await context.secrets.store("atcoderCookie", cookie);
         setSessionCookie(cookie);
-        vscode.window.showInformationMessage("AtCoder Cookie 已保存");
-        send({ type: "cookieStatus", hasCookie: true, statusMessage: "✅ Cookie 保存成功" });
+        vscode.window.showInformationMessage(t("cookie.saved"));
+        send({ type: "cookieStatus", hasCookie: true, statusMessage: t("cookie.saveSuccess") });
         notifyCookieChanged(true);
     } else {
         await context.secrets.delete("atcoderCookie");
         setSessionCookie("");
-        send({ type: "cookieStatus", hasCookie: false, statusMessage: "Cookie 已清除" });
+        send({ type: "cookieStatus", hasCookie: false, statusMessage: t("cookie.cleared") });
     }
 }
 
 export async function handleRegistration(contest: string, rated: boolean | undefined, send: (payload: Record<string, unknown>) => void) {
-    send({ type: "loading", text: `正在报名 ${contest} ...` });
+    send({ type: "loading", text: t("load.register", { contest }) });
     try {
         const page = await fetchContest(contest);
         if (page.signed) {
-            send({ type: "registrationStatus", signed: true, registrationMessage: "已报名，无需重复操作" });
+            send({ type: "registrationStatus", signed: true, registrationMessage: t("register.already") });
             return;
         }
         const result = await signedUpContest(contest, page.csrfToken, rated);
         send({ type: "registrationStatus", signed: result.success, registrationMessage: result.message });
     } catch (error) {
         if (!handleErrorWithCfAndLogin(error, send)) {
-            send({ type: "registrationStatus", signed: false, registrationMessage: error instanceof Error ? error.message : "报名失败" });
+            send({ type: "registrationStatus", signed: false, registrationMessage: error instanceof Error ? error.message : t("register.failed") });
         }
     }
 }
 
 export async function handleFetchSubmitPage(contest: string, send: (payload: Record<string, unknown>) => void) {
-    send({ type: "loading", text: `正在获取 ${contest} 提交页面信息...` });
+    send({ type: "loading", text: t("load.submitPage", { contest }) });
     try {
         const pageData = await fetchSubmitPage(contest);
         send({ type: "submitPage", submitTasks: pageData.tasks, languages: pageData.languages, csrfToken: pageData.csrfToken });
-        send({ type: "update", text: "已获取提交页面信息" });
+        send({ type: "update", text: t("submit.pageReady") });
     } catch (error) {
         if (error instanceof CfError) {
-            send({ type: "submitPageError", message: "该比赛提交需要 Cloudflare 验证，插件无法自动完成。请在浏览器中打开提交页完成验证后提交。", url: error.url });
+            send({ type: "submitPageError", message: t("submit.cfNeedBrowser"), url: error.url });
             return;
         }
         if (error instanceof LoginRequiredError) {
             send({
                 type: "submitPageError",
                 message: getSessionCookie()
-                    ? "提交需要登录，请检查 AtCoder Cookie 是否有效或已过期；若提交页触发 Cloudflare 验证，请用浏览器打开完成验证。"
-                    : "提交需要登录，请先设置 AtCoder Cookie 后再试。",
+                    ? t("submit.loginRequired")
+                    : t("submit.loginRequiredNoCookie"),
                 url: `https://atcoder.jp/contests/${contest}/submit`,
             });
             return;
@@ -192,7 +193,7 @@ export async function handleFetchSubmitPage(contest: string, send: (payload: Rec
         if (!handleErrorWithCfAndLogin(error, send)) {
             send({
                 type: "submitPageError",
-                message: error instanceof Error ? error.message : "获取提交页面失败",
+                message: error instanceof Error ? error.message : t("err.submitPage"),
                 url: `https://atcoder.jp/contests/${contest}/submit`,
             });
         }
@@ -207,15 +208,15 @@ export async function handleSubmitCode(
     send: (payload: Record<string, unknown>) => void,
 ) {
     if (!taskScreenName || !languageId || !sourceCode) {
-        send({ type: "submitResult", submitResult: { success: false, message: "提交参数不完整" } });
+        send({ type: "submitResult", submitResult: { success: false, message: t("submit.paramsIncomplete") } });
         return;
     }
-    send({ type: "loading", text: "正在提交代码..." });
+    send({ type: "loading", text: t("load.submitting") });
     try {
         const result = await submitCodeWithRedirect(contest, taskScreenName, languageId, sourceCode);
         send({ type: "submitResult", submitResult: result });
         if (result.success) {
-            send({ type: "update", text: "代码提交成功，正在获取评测结果..." });
+            send({ type: "update", text: t("submit.successWaiting") });
             try {
                 await pullSubmitStatu(contest, taskScreenName!, send);
             } catch {
@@ -229,7 +230,7 @@ export async function handleSubmitCode(
         } else send({ type: "error", text: result.message });
     } catch (error) {
         if (error instanceof CfError) {
-            send({ type: "submitResult", submitResult: { success: false, message: "该比赛提交需要 Cloudflare 验证，插件无法自动完成。请在浏览器中打开提交页完成验证后提交。" } });
+            send({ type: "submitResult", submitResult: { success: false, message: t("submit.cfNeedBrowser") } });
             return;
         }
         if (error instanceof LoginRequiredError) {
@@ -238,62 +239,62 @@ export async function handleSubmitCode(
                 submitResult: {
                     success: false,
                     message: getSessionCookie()
-                        ? "提交需要登录，请检查 AtCoder Cookie 是否有效或已过期；若提交页触发 Cloudflare 验证，请用浏览器打开完成验证。"
-                        : "提交需要登录，请先设置 AtCoder Cookie 后再试。",
+                        ? t("submit.loginRequired")
+                        : t("submit.loginRequiredNoCookie"),
                 },
             });
             return;
         }
         if (!handleErrorWithCfAndLogin(error, send)) {
-            send({ type: "submitResult", submitResult: { success: false, message: error instanceof Error ? error.message : "提交失败" } });
+            send({ type: "submitResult", submitResult: { success: false, message: error instanceof Error ? error.message : t("err.submit") } });
         }
     }
 }
 
 export async function handleFetchSubHistory(contest: string, send: (payload: Record<string, unknown>) => void) {
-    send({ type: "loading", text: `正在获取 ${contest} 提交记录...` });
+    send({ type: "loading", text: t("load.subHistory", { contest }) });
     try {
         const submissions = await fetchSubmitHistory(contest);
         send({ type: "submissionHistory", submissions });
     } catch (error) {
         if (!handleErrorWithCfAndLogin(error, send)) {
-            send({ type: "error", text: error instanceof Error ? error.message : "获取提交记录失败" });
+            send({ type: "error", text: error instanceof Error ? error.message : t("err.subHistory") });
         }
     }
 }
 
 export async function handleFetchSubmissionDetail(contest: string, id: string, send: (payload: Record<string, unknown>) => void) {
-    send({ type: "loading", text: `正在获取提交 ${id} 的详细信息...` });
+    send({ type: "loading", text: t("load.subDetail", { id }) });
     try {
         const detail = await fetchSubmissionDetail(contest, id);
         send({ type: "submissionDetail", submissionDetail: detail });
     } catch (error) {
         if (!handleErrorWithCfAndLogin(error, send)) {
-            send({ type: "error", text: error instanceof Error ? error.message : "获取提交详情失败" });
+            send({ type: "error", text: error instanceof Error ? error.message : t("err.subDetail") });
         }
     }
 }
 
 export async function handleFetchStandings(contest: string, send: (payload: Record<string, unknown>) => void) {
-    send({ type: "loading", text: `正在获取 ${contest} 排行榜...` });
+    send({ type: "loading", text: t("load.standings", { contest }) });
     try {
         const standings = await fetchStandings(contest);
         send({ type: "standings", contest, standings });
     } catch (error) {
         if (!handleErrorWithCfAndLogin(error, send)) {
-            send({ type: "error", text: error instanceof Error ? error.message : "获取排行榜失败" });
+            send({ type: "error", text: error instanceof Error ? error.message : t("err.standings") });
         }
     }
 }
 
 export async function handleGetContests(send: (payload: Record<string, unknown>) => void) {
-    send({ type: "loading", text: "正在抓取 AtCoder 首页比赛列表..." });
+    send({ type: "loading", text: t("load.homepage") });
     try {
         const contests = await fetchHomepageContests();
         send({ type: "contestList", contests });
     } catch (error) {
         if (!handleErrorWithCfAndLogin(error, send)) {
-            send({ type: "error", text: error instanceof Error ? error.message : "获取比赛列表失败" });
+            send({ type: "error", text: error instanceof Error ? error.message : t("err.homepage") });
         }
     }
 }
@@ -302,9 +303,9 @@ export async function handleExportToCph(problem: AtCoderProblem, send: (payload:
     try {
         const payload = buildCphProblem(problem);
         await sendToCph(payload);
-        send({ type: "cphExportResult", success: true, message: "success send to cph" });
+        send({ type: "cphExportResult", success: true, message: t("cph.exportSuccess") });
     } catch (error) {
-        const message = error instanceof Error ? error.message : "fail to send cph";
+        const message = error instanceof Error ? error.message : t("cph.exportFailed");
         send({ type: "cphExportResult", success: false, message: message });
     }
 }

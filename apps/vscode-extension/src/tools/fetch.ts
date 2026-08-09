@@ -5,12 +5,13 @@ import * as zlib from "zlib";
 import * as net from "net";
 import * as tls from "tls";
 import { SubRecord } from "./types"
+import { t } from "./i18n"
 
 
 export class CfError extends Error {
 	url: string;
 	constructor(url: string) {
-		super(`AtCoder 触发了 Cloudflare 验证，插件无法绕过。请在浏览器中直接访问 AtCoder。\nURL: ${url}`);
+		super(t("err.cf", { url }));
 		this.name = "CfError";
 		this.url = url;
 	}
@@ -18,14 +19,7 @@ export class CfError extends Error {
 
 export class ProxyError extends Error {
 	constructor() {
-		super(
-			`网络代理连接失败，无法访问 AtCoder。\n` +
-			`可能原因：在 WSL 2 中，代理地址 127.0.0.1 指向 WSL 而非 Windows 宿主机。\n` +
-			`解决方案：\n` +
-			`  1. 在 WSL 中执行: export NO_PROXY=.atcoder.jp\n` +
-			`  2. 或设置正确的宿主机 IP: export HTTPS_PROXY=http://$(hostname).local:7897\n` +
-			`  3. 或连接 Windows 宿主机的 WSL 网关 IP（查看 /etc/resolv.conf）`
-		);
+		super(t("err.proxy"));
 		this.name = "ProxyError";
 	}
 }
@@ -33,14 +27,7 @@ export class ProxyError extends Error {
 export class LoginRequiredError extends Error {
 	url: string;
 	constructor(url: string) {
-		super(
-			`访问需要登录，请设置 AtCoder Cookie。\n` +
-			`获取方法：\n` +
-			`  1. 在浏览器中登录 https://atcoder.jp\n` +
-			`  2. 按 F12 打开开发者工具 → Application → Cookies\n` +
-			`  3. 找到 atcoder.jp 下的 REVEL_SESSION，复制其 Value\n` +
-			`  4. 在插件设置中输入: REVEL_SESSION=复制的值`
-		);
+		super(t("err.login"));
 		this.name = "LoginRequiredError";
 		this.url = url;
 	}
@@ -278,7 +265,7 @@ function handleResponse(
 				reject(new CfError(url));
 			} else {
 				console.log(`${logPrefix} 403 但非 CF，可能 Cookie 无效`);
-				reject(new Error(`访问被拒绝 (403)。Cookie 可能无效或已过期，请重新登录 AtCoder 获取新的 REVEL_SESSION`));
+				reject(new Error(t("err.http403")));
 			}
 			return;
 		}
@@ -291,12 +278,12 @@ function handleResponse(
 			if (res.statusCode === 404) {
 				if (!sessionCookie) {
 					console.log(`${logPrefix} 404 且无 Cookie，需要登录`);
-					reject(new Error(`访问失败 (404)。题目不存在或需要登录，请先设置 AtCoder Cookie。`));
+					reject(new Error(t("err.http404NoCookie")));
 					return;
 				}
 				const rejectCookieInvalid = () => {
 					console.log(`${logPrefix} 404 但有 Cookie，可能 Cookie 无效`);
-					reject(new Error(`访问失败 (404)。Cookie 可能无效或已过期，请重新登录 AtCoder 获取新的 REVEL_SESSION`));
+					reject(new Error(t("err.http404BadCookie")));
 				};
 				const contest = extractContestFromUrl(url);
 				if (!contest) {
@@ -306,7 +293,7 @@ function handleResponse(
 				void isContestStarted(contest).then((started) => {
 					if (started === false) {
 						console.log(`${logPrefix} 404 且比赛未开始，题目未公开: ${url}`);
-						reject(new Error(`访问失败 (404)。比赛「${contest}」尚未开始，题目还未公开，请等待开赛后再试。`));
+						reject(new Error(t("err.http404NotStarted", { contest })));
 					} else {
 						rejectCookieInvalid();
 					}
@@ -314,7 +301,7 @@ function handleResponse(
 				return;
 			}
 			console.log(`${logPrefix} 非 200 状态码:`, res.statusCode);
-			reject(new Error(`Request failed with status ${res.statusCode}`));
+			reject(new Error(t("err.httpStatus", { status: res.statusCode })));
 			return;
 		}
 
@@ -371,7 +358,7 @@ function fetchTextOnce(url: string, withCookie: boolean): Promise<string> {
 				reject(new ProxyError());
 				return;
 			}
-			reject(new Error(`网络错误: ${err.message}`));
+			reject(new Error(t("err.network", { msg: err.message })));
 		});
 	});
 }
@@ -413,7 +400,7 @@ export function fetchTextPost(url: string, body: string): Promise<string> {
 				reject(new ProxyError());
 				return;
 			}
-			reject(new Error(`网络错误: ${err.message}`));
+			reject(new Error(t("err.network", { msg: err.message })));
 		});
 	});
 }

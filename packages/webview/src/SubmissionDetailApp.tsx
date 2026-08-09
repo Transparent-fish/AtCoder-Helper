@@ -1,6 +1,7 @@
 import React from "react";
 import { Button, Card, Spinner } from "@template/ui";
 import { useVSCode } from "./VSCodeProvider";
+import { useI18n } from "./i18n";
 import type { SubmissionDetail, WebviewMessage } from "./types";
 
 interface SubmissionDetailAppProps {
@@ -29,6 +30,7 @@ const statusColor = (status: string): string => {
 
 const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest = "", initSubmissionId = "" }) => {
     const vscode = useVSCode();
+    const { t } = useI18n();
     const [detail, setDetail] = React.useState<SubmissionDetail | null>(null);
     const [isLoading, setIsLoading] = React.useState(false);
     const [copied, setCopied] = React.useState(false);
@@ -37,11 +39,11 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
 
     const fetchDetail = () => {
         if (!initContest || !initSubmissionId) {
-            setStatus("缺少比赛代号或提交 ID");
+            setStatus(t("ui.missingContestOrId"));
             return;
         }
         setIsLoading(true);
-        setStatus(`正在获取提交 ${initSubmissionId} 的详细信息...`);
+        setStatus(t("ui.fetchingDetail"));
         vscode.postMessage({ command: "fetchSubmissionDetail", contest: initContest, id: initSubmissionId });
     };
 
@@ -62,21 +64,21 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
             if (message.type === "submissionDetail") {
                 setDetail(message.submissionDetail ?? null);
                 setIsLoading(false);
-                setStatus(`已加载提交 ${message.submissionDetail?.id ?? ""}`);
+                setStatus(t("status.detailLoaded", { id: message.submissionDetail?.id ?? "" }));
             }
             if (message.type === "loading" || message.type === "update") {
                 setStatus(message.text ?? "");
             }
             if (message.type === "error") {
-                setStatus(message.text ?? "获取提交详情失败");
+                setStatus(message.text ?? t("err.detail"));
                 setIsLoading(false);
             }
             if (message.type === "cf_challenge") {
-                setStatus("AtCoder 触发 Cloudflare 验证，请在浏览器中打开查看");
+                setStatus(t("status.cfOpenBrowser"));
                 setIsLoading(false);
             }
             if (message.type === "loginRequired") {
-                setStatus("需要登录 AtCoder 账号，请在侧边栏设置 Cookie 后再试");
+                setStatus(t("status.loginRequiredSidebar"));
                 setIsLoading(false);
             }
         };
@@ -94,7 +96,7 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
     return (
         <div className="h-screen flex flex-col bg-[var(--vscode-editor-background)] text-[var(--vscode-editor-foreground)]">
             <div className="h-[35px] flex items-center px-3 bg-[var(--vscode-titleBar-activeBackground)] text-[var(--vscode-titleBar-activeForeground)]">
-                <span className="text-[13px] select-none truncate">提交 {initSubmissionId} - {initContest}</span>
+                <span className="text-[13px] select-none truncate">{t("ui.submissionTitle", { id: initSubmissionId, contest: initContest })}</span>
                 <div className="ml-auto flex items-center gap-1">
                     <Button
                         onClick={fetchDetail}
@@ -102,7 +104,7 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
                         size="sm"
                         className="h-[24px] text-[11px]"
                     >
-                        {isLoading ? "刷新中..." : "刷新"}
+                        {isLoading ? t("ui.refreshing") : t("ui.refresh")}
                     </Button>
                     <Button
                         onClick={() => vscode.postMessage({ command: "openBrowser", url: `https://atcoder.jp/contests/${initContest}/submissions/${initSubmissionId}` })}
@@ -110,7 +112,7 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
                         variant="secondary"
                         className="h-[24px] text-[11px]"
                     >
-                        浏览器打开
+                        {t("ui.browserOpen")}
                     </Button>
                 </div>
             </div>
@@ -119,10 +121,10 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
                 {isLoading && !detail ? (
                     <div className="flex items-center gap-2 text-[12px] opacity-70">
                         <Spinner size="sm" />
-                        <span>正在获取提交详情...</span>
+                        <span>{t("ui.fetchingDetail")}</span>
                     </div>
                 ) : !detail ? (
-                    <div className="text-[12px] opacity-60">{status || "无提交详情"}</div>
+                    <div className="text-[12px] opacity-60">{status || t("ui.noDetail")}</div>
                 ) : (
                     <>
                         <Card className="p-3 space-y-2">
@@ -133,26 +135,26 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
                                 </span>
                             </div>
                             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                {renderMeta("提交时间", detail.time)}
-                                {renderMeta("得分", detail.score)}
-                                {renderMeta("语言", detail.language)}
-                                {renderMeta("代码长度", detail.codeLength)}
-                                {renderMeta("执行时间", detail.execTime)}
-                                {renderMeta("内存", detail.memory)}
+                                {renderMeta(t("ui.submitTime"), detail.time)}
+                                {renderMeta(t("ui.score"), detail.score)}
+                                {renderMeta(t("ui.language"), detail.language)}
+                                {renderMeta(t("ui.codeLength"), detail.codeLength)}
+                                {renderMeta(t("ui.execTime"), detail.execTime)}
+                                {renderMeta(t("ui.memory"), detail.memory)}
                             </div>
                         </Card>
 
                         {detail.judgeSets && detail.judgeSets.length > 0 && (
                             <Card className="p-3 space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <div className="text-[12px] font-semibold">测试点</div>
+                                    <div className="text-[12px] font-semibold">{t("ui.testPoints")}</div>
                                     <Button
                                         onClick={() => setShowJudgeSets((v) => !v)}
                                         size="sm"
                                         variant="secondary"
                                         className="h-[24px] text-[11px]"
                                     >
-                                        {showJudgeSets ? "收起" : "展开"}
+                                        {showJudgeSets ? t("ui.collapse") : t("ui.expand")}
                                     </Button>
                                 </div>
                                 {showJudgeSets && (
@@ -204,9 +206,9 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
 
                         <Card className="p-3 space-y-2">
                             <div className="flex items-center justify-between">
-                                <div className="text-[12px] font-semibold">源代码</div>
+                                <div className="text-[12px] font-semibold">{t("ui.sourceCode")}</div>
                                 <Button onClick={copyCode} size="sm" variant="secondary" className="h-[24px] text-[11px]">
-                                    {copied ? "已复制" : "复制"}
+                                    {copied ? t("ui.copied") : t("ui.copy")}
                                 </Button>
                             </div>
                             <pre className="text-[12px] leading-relaxed whitespace-pre-wrap break-words font-mono bg-[var(--vscode-input-background)] p-2 rounded">

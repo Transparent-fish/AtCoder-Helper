@@ -1,4 +1,5 @@
 import { fetchText } from "./fetch";
+import { t } from "./i18n";
 
 export interface Standing {
     rank: number;
@@ -22,7 +23,7 @@ export async function fetchStandings(contest: string, limit = 100): Promise<Stan
         data = JSON.parse(text) as Standings;
     } catch (error) {
         const reason = error instanceof Error ? error.message : "invalid json";
-        throw new Error(`排行榜数据解析失败: ${reason}`);
+        throw new Error(t("err.standingsParse", { reason }));
     }
     const rows = data.StandingsData ?? [];
     return rows.slice(0, limit).map((item) => ({

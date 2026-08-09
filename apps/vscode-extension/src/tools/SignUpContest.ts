@@ -1,4 +1,5 @@
 import { fetchText, fetchTextPost, CfError, LoginRequiredError, ProxyError } from "./fetch";
+import { t } from "./i18n";
 
 export interface ContestPage {
     contest: string;
@@ -113,20 +114,20 @@ function buildFormBody(fields: FormField[]): string {
 
 function parseRegistrationResult(html: string): RegistrationResult {
     const isSigned = /Unregister|registered/i.test(html);
-    if (isSigned) return { success: true, message: "报名成功！" };
+    if (isSigned) return { success: true, message: t("register.success") };
     const successMatch = html.match(
         /<div[^>]*class="[^"]*alert-success[^"]*"[^>]*>([\s\S]*?)<\/div>/i
     );
     if (successMatch) {
         const msg = successMatch[1].replace(/<[^>]+>/g, "").trim();
-        return { success: true, message: msg || "报名成功！" };
+        return { success: true, message: msg || t("register.success") };
     }
     const errMatch = html.match(
         /<div[^>]*class="[^"]*(?:alert-danger|alert-error)[^"]*"[^>]*>([\s\S]*?)<\/div>/i
     );
     if (errMatch) {
         const msg = errMatch[1].replace(/<[^>]+>/g, "").trim();
-        return { success: false, message: msg || "报名失败" };
+        return { success: false, message: msg || t("register.failed") };
     }
     return { success: false, message: "" };
 }
@@ -151,7 +152,7 @@ async function completeRatedRegistration(
         `<form[^>]*action="[^"]*${contest}\\/rated_register"[^>]*>([\\s\\S]*?)<\\/form>`,
         "i"
     );
-    const fallback: RegistrationResult = { success: false, message: "报名失败，请检查 Cookie 是否有效" };
+    const fallback: RegistrationResult = { success: false, message: t("register.failedBadCookie") };
     const step2Form = stepHtml.match(now)?.[1];
     if (!step2Form) {
         const result = parseRegistrationResult(stepHtml);
@@ -185,7 +186,7 @@ async function registerFormBased(contest: string, formHtml: string, rated: boole
         if (result.message) return result;
         return {
             success: false,
-            message: "报名未成功：注册页返回校验结果，请确认表单必填信息（如姓名、邮箱、居住地等）填写完整",
+            message: t("register.formIncomplete"),
         };
     }
     return await completeRatedRegistration(contest, responseHtml, rated);
@@ -196,11 +197,11 @@ export async function signedUpContest(contest: string, csrfToken: string, rated?
     try {
         const registerHtml = await fetchText(registerUrl);
         if (/Unregister|already registered/i.test(registerHtml)) {
-            return { success: true, message: "已报名" };
+            return { success: true, message: t("register.alreadyDone") };
         }
         const formHtml = extractFormHtml(registerHtml, contest);
         if (!formHtml) {
-            return { success: false, message: "报名已截止或无法获取报名信息" };
+            return { success: false, message: t("register.closed") };
         }
         const freshCsrfMatch = formHtml.match(/name="csrf_token"[^>]*value="([^"]*)"/i);
         const freshCsrf = freshCsrfMatch ? freshCsrfMatch[1] : csrfToken;
@@ -212,6 +213,6 @@ export async function signedUpContest(contest: string, csrfToken: string, rated?
         if (error instanceof CfError || error instanceof LoginRequiredError || error instanceof ProxyError) {
             throw error;
         }
-        return { success: false, message: error instanceof Error ? error.message : "报名请求失败" };
+        return { success: false, message: error instanceof Error ? error.message : t("register.requestFailed") };
     }
 }

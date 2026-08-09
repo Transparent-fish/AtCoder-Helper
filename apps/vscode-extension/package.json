@@ -24,7 +24,7 @@
     "commands": [
       {
         "command": "extension.showWebview",
-        "title": "AtCoder Helper（编辑器）"
+        "title": "AtCoder Helper (Editor)"
       },
       {
         "command": "extension.setDeeplApiKey",

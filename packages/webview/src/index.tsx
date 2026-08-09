@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { VSCodeProvider } from "./VSCodeProvider";
+import { I18nProvider } from "./i18n";
 import { WebviewApp } from "./WebviewApp";
 import { SidebarApp } from "./SidebarApp";
 import { ContestApp } from "./ContestApp";
@@ -14,20 +15,22 @@ if (container) {
   const root = createRoot(container);
   root.render(
     <React.StrictMode>
-      <VSCodeProvider>
-        {mode === "contest" ? (
-          <ContestApp initContest={window.__ATCODER_INIT_CONTEST__} />
-        ) : mode === "sidebar" ? (
-          <SidebarApp />
-        ) : mode === "submission" ? (
-          <SubmissionDetailApp
-            initContest={window.__ATCODER_INIT_CONTEST__}
-            initSubmissionId={window.__ATCODER_SUBMISSION_ID__}
-          />
-        ) : (
-          <WebviewApp />
-        )}
-      </VSCodeProvider>
+      <I18nProvider>
+        <VSCodeProvider>
+          {mode === "contest" ? (
+            <ContestApp initContest={window.__ATCODER_INIT_CONTEST__} />
+          ) : mode === "sidebar" ? (
+            <SidebarApp />
+          ) : mode === "submission" ? (
+            <SubmissionDetailApp
+              initContest={window.__ATCODER_INIT_CONTEST__}
+              initSubmissionId={window.__ATCODER_SUBMISSION_ID__}
+            />
+          ) : (
+            <WebviewApp />
+          )}
+        </VSCodeProvider>
+      </I18nProvider>
     </React.StrictMode>
   );
 }
