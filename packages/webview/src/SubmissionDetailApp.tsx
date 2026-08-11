@@ -2,31 +2,15 @@ import React from "react";
 import { Button, Card, Spinner } from "@template/ui";
 import { useVSCode } from "./VSCodeProvider";
 import { useI18n } from "./i18n";
-import type { SubmissionDetail, WebviewMessage } from "./types";
+import { StatusBadge } from "./components/StatusBadge";
+import { statusColor } from "./utils/status";
+import { useWebviewMessage } from "./hooks/useWebviewMessage";
+import type { SubmissionDetail } from "./types";
 
 interface SubmissionDetailAppProps {
     initContest?: string;
     initSubmissionId?: string;
 }
-
-const statusColor = (status: string): string => {
-    switch (status) {
-        case "AC":
-            return "text-green-500 bg-green-500/10";
-        case "WA":
-            return "text-red-500 bg-red-500/10";
-        case "TLE":
-            return "text-cyan-500 bg-cyan-500/10";
-        case "MLE":
-            return "text-yellow-500 bg-yellow-500/10";
-        case "RE":
-            return "text-purple-500 bg-purple-500/10";
-        case "CE":
-            return "text-gray-400 bg-gray-400/10";
-        default:
-            return "text-gray-400 bg-gray-400/10";
-    }
-};
 
 const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest = "", initSubmissionId = "" }) => {
     const vscode = useVSCode();
@@ -58,33 +42,27 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
         fetchDetail();
     }, []);
 
-    React.useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            const message = event.data as WebviewMessage;
-            if (message.type === "submissionDetail") {
-                setDetail(message.submissionDetail ?? null);
-                setIsLoading(false);
-                setStatus(t("status.detailLoaded", { id: message.submissionDetail?.id ?? "" }));
-            }
-            if (message.type === "loading" || message.type === "update") {
-                setStatus(message.text ?? "");
-            }
-            if (message.type === "error") {
-                setStatus(message.text ?? t("err.detail"));
-                setIsLoading(false);
-            }
-            if (message.type === "cf_challenge") {
-                setStatus(t("status.cfOpenBrowser"));
-                setIsLoading(false);
-            }
-            if (message.type === "loginRequired") {
-                setStatus(t("status.loginRequiredSidebar"));
-                setIsLoading(false);
-            }
-        };
-        window.addEventListener("message", handleMessage);
-        return () => window.removeEventListener("message", handleMessage);
-    }, []);
+    useWebviewMessage({
+        submissionDetail: (message) => {
+            setDetail(message.submissionDetail ?? null);
+            setIsLoading(false);
+            setStatus(t("status.detailLoaded", { id: message.submissionDetail?.id ?? "" }));
+        },
+        loading: (message) => setStatus(message.text ?? ""),
+        update: (message) => setStatus(message.text ?? ""),
+        error: (message) => {
+            setStatus(message.text ?? t("err.detail"));
+            setIsLoading(false);
+        },
+        cf_challenge: () => {
+            setStatus(t("status.cfOpenBrowser"));
+            setIsLoading(false);
+        },
+        loginRequired: () => {
+            setStatus(t("status.loginRequiredSidebar"));
+            setIsLoading(false);
+        },
+    });
 
     const renderMeta = (label: string, value: string | undefined): React.ReactNode => (
         <div className="flex items-center gap-2 text-[12px]">
@@ -130,9 +108,7 @@ const SubmissionDetailApp: React.FC<SubmissionDetailAppProps> = ({ initContest =
                         <Card className="p-3 space-y-2">
                             <div className="flex items-center justify-between flex-wrap gap-1">
                                 <div className="text-[13px] font-semibold">{detail.task}</div>
-                                <span className={`text-[11px] px-2 py-0.5 rounded font-bold ${statusColor(detail.status)}`}>
-                                    {detail.status}
-                                </span>
+                                <StatusBadge status={detail.status} className="text-[11px] px-2 py-0.5" />
                             </div>
                             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                                 {renderMeta(t("ui.submitTime"), detail.time)}
