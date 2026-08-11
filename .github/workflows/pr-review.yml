@@ -8,10 +8,11 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  actions: write
 
 jobs:
-  review:
-    name: Code Review
+  check:
+    name: Code Checks
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -72,14 +73,51 @@ jobs:
           echo "$overages" | tee linelength_output.txt
           if [ -z "$overages" ]; then echo "passed=true" >> $GITHUB_OUTPUT; else echo "passed=false" >> $GITHUB_OUTPUT; fi
 
-      - env:
-          GH_TOKEN: ${{ github.token }}
-          BUILD: ${{ steps.build.outcome }}
-          LINT: ${{ steps.lint.outcome }}
-          TEST: ${{ steps.test.outcome }}
-          LL: ${{ steps.linelength.outputs.passed }}
+      - name: Collect results & logs
         shell: bash
         run: |
+          mkdir -p artifact/logs
+          {
+            echo "lint=${{ steps.lint.outcome }}"
+            echo "build=${{ steps.build.outcome }}"
+            echo "test=${{ steps.test.outcome }}"
+            echo "ll=${{ steps.linelength.outputs.passed }}"
+          } > artifact/results.txt
+          for f in lint build test linelength; do
+            if [ -f "${f}_output.txt" ]; then tail -n 40 "${f}_output.txt" > "artifact/logs/${f}_output.txt"; fi
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: check-results
+          path: artifact/
+          retention-days: 1
+
+      - name: Fail if any check failed
+        if: >-
+          steps.lint.outcome == 'failure' ||
+          steps.build.outcome == 'failure' ||
+          steps.test.outcome == 'failure' ||
+          steps.linelength.outputs.passed != 'true'
+        run: exit 1
+
+  report:
+    name: Post PR Report
+    needs: check
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: check-results
+          path: ./results
+
+      - name: Build report
+        shell: bash
+        run: |
+          . ./results/results.txt
+
           echo "## PR 审查报告" > comment.md
           echo "" >> comment.md
           echo "### 检查结果" >> comment.md
@@ -87,28 +125,55 @@ jobs:
           echo "| 检查项 | 状态 |" >> comment.md
           echo "|--------|------|" >> comment.md
 
-          if [ "$BUILD" = "success" ]; then echo "| \`pnpm build\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm build\` | :x: |" >> comment.md; fi
-          if [ "$LINT" = "success" ]; then echo "| \`pnpm lint\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm lint\` | :x: |" >> comment.md; fi
-          if [ "$TEST" = "success" ]; then echo "| \`pnpm test\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm test\` | :x: |" >> comment.md; fi
-          if [ "$LL" = "true" ]; then echo "| 函数 <= 80 行 | :white_check_mark: |" >> comment.md; else echo "| 函数 <= 80 行 | :x: |" >> comment.md; fi
+          if [ "$lint" = "success" ]; then echo "| \`pnpm lint\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm lint\` | :x: |" >> comment.md; fi
+          if [ "$build" = "success" ]; then echo "| \`pnpm build\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm build\` | :x: |" >> comment.md; fi
+          if [ "$test" = "success" ]; then echo "| \`pnpm test:unit\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm test:unit\` | :x: |" >> comment.md; fi
+          if [ "$ll" = "true" ]; then echo "| 函数 <= 80 行 | :white_check_mark: |" >> comment.md; else echo "| 函数 <= 80 行 | :x: |" >> comment.md; fi
 
           echo "" >> comment.md
           echo "### 未通过的检查" >> comment.md
           echo "" >> comment.md
 
           any_fail=false
-          if [ "$BUILD" != "success" ]; then echo "- [ ] \`pnpm build\`" >> comment.md; any_fail=true; fi
-          if [ "$LINT" != "success" ]; then echo "- [ ] \`pnpm lint\`" >> comment.md; any_fail=true; fi
-          if [ "$TEST" != "success" ]; then echo "- [ ] \`pnpm test\`" >> comment.md; any_fail=true; fi
-          if [ "$LL" != "true" ]; then echo "- [ ] 函数长度不超过 80 行" >> comment.md; any_fail=true; fi
+          if [ "$lint" != "success" ]; then echo "- [ ] \`pnpm lint\`" >> comment.md; any_fail=true; fi
+          if [ "$build" != "success" ]; then echo "- [ ] \`pnpm build\`" >> comment.md; any_fail=true; fi
+          if [ "$test" != "success" ]; then echo "- [ ] \`pnpm test:unit\`" >> comment.md; any_fail=true; fi
+          if [ "$ll" != "true" ]; then echo "- [ ] 函数长度不超过 80 行" >> comment.md; any_fail=true; fi
 
-          if [ "$any_fail" = false ]; then echo "全部通过，无需修改。" >> comment.md; fi
+          if [ "$any_fail" = false ]; then
+            echo "全部通过，无需修改。" >> comment.md
+          else
+            echo "" >> comment.md
+            echo "### 失败详情" >> comment.md
+            echo "" >> comment.md
+
+            append_log() {
+              local label="$1" logfile="$2"
+              if [ -f "$logfile" ] && [ -s "$logfile" ]; then
+                echo "<details><summary>$label（最后 40 行）</summary>" >> comment.md
+                echo "" >> comment.md
+                echo '```' >> comment.md
+                cat "$logfile" >> comment.md
+                echo '```' >> comment.md
+                echo "</details>" >> comment.md
+                echo "" >> comment.md
+              fi
+            }
+
+            [ "$lint" != "success" ] && append_log "\`pnpm lint\`" "results/logs/lint_output.txt"
+            [ "$build" != "success" ] && append_log "\`pnpm build\`" "results/logs/build_output.txt"
+            [ "$test" != "success" ] && append_log "\`pnpm test:unit\`" "results/logs/test_output.txt"
+            [ "$ll" != "true" ] && append_log "函数长度 <= 80 行" "results/logs/linelength_output.txt"
+          fi
 
           echo "" >> comment.md
           echo "---" >> comment.md
           echo "" >> comment.md
           echo "*自动生成 by PR Review workflow*" >> comment.md
 
+      - name: Post comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
           gh pr comment ${{ github.event.pull_request.number }} --body "$(cat comment.md)"
-
-          if [ "$any_fail" = true ]; then exit 1; fi

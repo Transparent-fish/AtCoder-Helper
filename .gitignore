@@ -1,6 +1,7 @@
 .turbo/
 temp/
 out/
+out-test/
 src-tauri/target
 **/.env
 **/.pnpm-store
