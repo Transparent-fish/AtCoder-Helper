@@ -2,7 +2,10 @@ import React from "react";
 import { Button, Spinner } from "@template/ui";
 import { useVSCode } from "./VSCodeProvider";
 import { useI18n } from "./i18n";
-import type { HomepageContest, SubmissionRecord, WebviewMessage } from "./types";
+import { SubmissionList } from "./components/SubmissionHistory";
+import { useWebviewMessage } from "./hooks/useWebviewMessage";
+import { formatStart } from "./utils/format";
+import type { HomepageContest, SubmissionRecord } from "./types";
 
 const CATEGORY_GROUPS: Array<{ key: HomepageContest["category"] }> = [
     { key: "active" },
@@ -10,32 +13,6 @@ const CATEGORY_GROUPS: Array<{ key: HomepageContest["category"] }> = [
     { key: "recent" },
     { key: "daily" },
 ];
-
-const statusColor = (status: string): string => {
-    switch (status) {
-        case "AC":
-            return "text-green-500 bg-green-500/10";
-        case "WA":
-            return "text-red-500 bg-red-500/10";
-        case "TLE":
-            return "text-cyan-500 bg-cyan-500/10";
-        case "MLE":
-            return "text-yellow-500 bg-yellow-500/10";
-        case "RE":
-            return "text-purple-500 bg-purple-500/10";
-        case "CE":
-            return "text-gray-400 bg-gray-400/10";
-        default:
-            return "text-gray-400 bg-gray-400/10";
-    }
-};
-
-const formatStart = (start: string): string => (start.length >= 16 ? start.slice(5, 16) : start);
-
-const formatSubmitTime = (time: string): string => {
-    const m = time.match(/(\d{2})-(\d{2}) (\d{2}:\d{2})/);
-    return m ? `${m[1]}-${m[2]} ${m[3]}` : time;
-};
 
 const SidebarApp: React.FC = () => {
     const vscode = useVSCode();
@@ -92,58 +69,52 @@ const SidebarApp: React.FC = () => {
         vscode.postMessage({ command: "getCookie" });
     }, []);
 
-    React.useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            const message = event.data as WebviewMessage;
-            if (message.type === "contestList") {
-                setContests(message.contests ?? []);
-                setLoadingList(false);
-                setStatus(t("status.homepageLoaded", { count: (message.contests ?? []).length }));
-            }
-            if (message.type === "submissionHistory") {
-                setSubmissions(message.submissions ?? []);
-                setLoadingHistory(false);
-                setStatus(t("status.historyLoaded", { count: (message.submissions ?? []).length }));
-            }
-            if (message.type === "loading" || message.type === "update") {
-                setStatus(message.text ?? "");
-            }
-            if (message.type === "cookieChanged") {
-                if (typeof message.hasCookie === "boolean") {
-                    setHasCookie(message.hasCookie);
-                    if (message.hasCookie) {
-                        setShowLogin(false);
-                        setCookieInput("");
-                    }
-                }
-                setStatus(t("cookie.updated"));
-                fetchContests();
-                if (currentContestRef.current) {
-                    fetchHistory(currentContestRef.current);
-                }
-            }
-            if (message.type === "cookieStatus") {
-                const next = message.hasCookie ?? false;
-                setHasCookie(next);
-                if (next) {
+    useWebviewMessage({
+        contestList: (message) => {
+            setContests(message.contests ?? []);
+            setLoadingList(false);
+            setStatus(t("status.homepageLoaded", { count: (message.contests ?? []).length }));
+        },
+        submissionHistory: (message) => {
+            setSubmissions(message.submissions ?? []);
+            setLoadingHistory(false);
+            setStatus(t("status.historyLoaded", { count: (message.submissions ?? []).length }));
+        },
+        loading: (message) => setStatus(message.text ?? ""),
+        update: (message) => setStatus(message.text ?? ""),
+        cookieChanged: (message) => {
+            if (typeof message.hasCookie === "boolean") {
+                setHasCookie(message.hasCookie);
+                if (message.hasCookie) {
                     setShowLogin(false);
                     setCookieInput("");
                 }
-                if (message.statusMessage) setStatus(message.statusMessage);
             }
-            if (message.type === "loginRequired") {
-                setShowLogin(true);
-                setStatus(t("cookie.loginRequired"));
+            setStatus(t("cookie.updated"));
+            fetchContests();
+            if (currentContestRef.current) {
+                fetchHistory(currentContestRef.current);
             }
-            if (message.type === "error") {
-                setStatus(message.text ?? t("err.operationFailed"));
-                setLoadingList(false);
-                setLoadingHistory(false);
+        },
+        cookieStatus: (message) => {
+            const next = message.hasCookie ?? false;
+            setHasCookie(next);
+            if (next) {
+                setShowLogin(false);
+                setCookieInput("");
             }
-        };
-        window.addEventListener("message", handleMessage);
-        return () => window.removeEventListener("message", handleMessage);
-    }, []);
+            if (message.statusMessage) setStatus(message.statusMessage);
+        },
+        loginRequired: () => {
+            setShowLogin(true);
+            setStatus(t("cookie.loginRequired"));
+        },
+        error: (message) => {
+            setStatus(message.text ?? t("err.operationFailed"));
+            setLoadingList(false);
+            setLoadingHistory(false);
+        },
+    });
 
     const renderContestRow = (contest: HomepageContest) => (
         <div
@@ -243,47 +214,9 @@ const SidebarApp: React.FC = () => {
                 <div className="flex-1 overflow-y-auto">
                     {!currentContest ? (
                         <div className="p-3 text-[12px] opacity-60">{t("ui.clickContestForHistory")}</div>
-                    ) : loadingHistory && submissions.length === 0 ? (
-                        <div className="p-3 flex items-center gap-2 text-[12px] opacity-70">
-                            <Spinner size="sm" />
-                            <span>{t("ui.loadingHistory")}</span>
-                        </div>
-                    ) : submissions.length === 0 ? (
-                        <div className="p-3 text-[12px] opacity-60">{t("ui.noHistory")}</div>
                     ) : (
-                        <div className="space-y-1 p-1">
-                            {submissions.map((s) => (
-                                <div
-                                    key={s.id}
-                                    className="flex items-center gap-2 px-2 py-1 text-[12px] border border-[var(--vscode-panel-border)] rounded hover:bg-[var(--vscode-list-hoverBackground)]"
-                                >
-                                    <span className="flex-1 truncate font-medium" title={`${s.task} · ${s.taskScreenName}`}>{s.task}</span>
-                                    <span className="text-[10px] opacity-50 flex-shrink-0">{formatSubmitTime(s.time)}</span>
-                                    <span className={`text-[10px] px-1 rounded font-bold ${statusColor(s.status)}`}>
-                                        {s.status}
-                                    </span>
-                                    <span className="text-[11px] opacity-60 w-[40px] text-right">{s.score}</span>
-                                    <button
-                                        onClick={() => vscode.postMessage({ command: "openSubmission", contest: currentContest, id: s.id })}
-                                        className="text-[11px] underline opacity-60 hover:opacity-100 flex-shrink-0"
-                                    >
-                                        {t("ui.details")}
-                                    </button>
-                                    <a
-                                        href="#"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            vscode.postMessage({
-                                                command: "openBrowser",
-                                                url: `https://atcoder.jp/contests/${currentContest}/submissions/${s.id}`,
-                                            });
-                                        }}
-                                        className="text-[11px] underline opacity-60 hover:opacity-100 flex-shrink-0"
-                                    >
-                                        {t("ui.view")}
-                                    </a>
-                                </div>
-                            ))}
+                        <div className="p-1">
+                            <SubmissionList contest={currentContest} records={submissions} loading={loadingHistory} />
                         </div>
                     )}
                 </div>
