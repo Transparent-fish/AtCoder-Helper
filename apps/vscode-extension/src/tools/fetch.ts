@@ -209,6 +209,123 @@ function isContestStarted(contest: string): Promise<boolean | null> {
 		.catch(() => null);
 }
 
+function handleRedirect(
+	url: string,
+	res: http.IncomingMessage,
+	restoreSaved: Record<string, string | undefined>,
+	resolve: (value: string | PromiseLike<string>) => void,
+	reject: (reason: unknown) => void,
+	redirectFetcher: (url: string) => Promise<string>,
+	logPrefix: string,
+): boolean {
+	if (!res.statusCode || res.statusCode < 300 || res.statusCode >= 400 || !res.headers.location) {
+		return false;
+	}
+	const redirectUrl = new URL(res.headers.location, url).href;
+	console.log(`${logPrefix} 重定向:`, res.statusCode, `->`, redirectUrl);
+	restoreProxyEnv(restoreSaved);
+	if (redirectUrl.includes("/login")) {
+		console.log(`${logPrefix} 检测到登录重定向`);
+		reject(new LoginRequiredError(redirectUrl));
+	} else {
+		resolve(redirectFetcher(redirectUrl));
+	}
+	return true;
+}
+
+function pipeDecompress(res: http.IncomingMessage): stream.Readable {
+	const encoding = res.headers["content-encoding"] || "";
+	if (encoding.includes("br")) return res.pipe(zlib.createBrotliDecompress());
+	if (encoding.includes("gzip")) return res.pipe(zlib.createGunzip());
+	if (encoding.includes("deflate")) return res.pipe(zlib.createInflate());
+	return res;
+}
+
+function readBody(readable: stream.Readable): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const chunks: Buffer[] = [];
+		readable.on("data", (chunk: Buffer) => {
+			chunks.push(chunk);
+		});
+		readable.on("end", () => {
+			resolve(Buffer.concat(chunks).toString("utf8"));
+		});
+		readable.on("error", reject);
+	});
+}
+
+function handleNon200(
+	url: string,
+	statusCode: number | undefined,
+	reject: (reason: unknown) => void,
+	logPrefix: string,
+): void {
+	if (statusCode !== 404) {
+		console.log(`${logPrefix} 非 200 状态码:`, statusCode);
+		reject(new Error(t("err.httpStatus", { status: statusCode })));
+		return;
+	}
+	if (!sessionCookie) {
+		console.log(`${logPrefix} 404 且无 Cookie，需要登录`);
+		reject(new Error(t("err.http404NoCookie")));
+		return;
+	}
+	const rejectCookieInvalid = () => {
+		console.log(`${logPrefix} 404 但有 Cookie，可能 Cookie 无效`);
+		reject(new Error(t("err.http404BadCookie")));
+	};
+	const contest = extractContestFromUrl(url);
+	if (!contest) {
+		rejectCookieInvalid();
+		return;
+	}
+	void isContestStarted(contest).then((started) => {
+		if (started === false) {
+			console.log(`${logPrefix} 404 且比赛未开始，题目未公开: ${url}`);
+			reject(new Error(t("err.http404NotStarted", { contest })));
+		} else {
+			rejectCookieInvalid();
+		}
+	});
+}
+
+function handleBody(
+	url: string,
+	res: http.IncomingMessage,
+	body: string,
+	resolve: (value: string | PromiseLike<string>) => void,
+	reject: (reason: unknown) => void,
+	logPrefix: string,
+): void {
+	if (isCfChallenge(body)) {
+		console.log(`${logPrefix} 检测到 Cloudflare 挑战`);
+		reject(new CfError(url));
+		return;
+	}
+	if (res.statusCode === 403) {
+		const broad = ["Cloudflare", "challenge", "attention required"].some((p) => body.toLowerCase().includes(p));
+		if (broad) {
+			console.log(`${logPrefix} 403 + 泛化 CF 特征，判定为 Cloudflare 挑战`);
+			reject(new CfError(url));
+		} else {
+			console.log(`${logPrefix} 403 但非 CF，可能 Cookie 无效`);
+			reject(new Error(t("err.http403")));
+		}
+		return;
+	}
+	if (isLoginPage(body)) {
+		console.log(`${logPrefix} 检测到登录页面`);
+		reject(new LoginRequiredError(url));
+		return;
+	}
+	if (res.statusCode !== 200) {
+		handleNon200(url, res.statusCode, reject, logPrefix);
+		return;
+	}
+	console.log(`${logPrefix} 请求成功:`, url, `body.length=${body.length}`);
+	resolve(body);
+}
+
 function handleResponse(
 	url: string,
 	res: http.IncomingMessage,
@@ -220,98 +337,23 @@ function handleResponse(
 ) {
 	console.log(`${logPrefix} 收到响应:`, url, `status=${res.statusCode}`);
 
-	if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-		const redirectUrl = new URL(res.headers.location, url).href;
-		console.log(`${logPrefix} 重定向:`, res.statusCode, `->`, redirectUrl);
-		restoreProxyEnv(restoreSaved);
-		if (redirectUrl.includes("/login")) {
-			console.log(`${logPrefix} 检测到登录重定向`);
-			reject(new LoginRequiredError(redirectUrl));
-			return;
-		}
-		resolve(redirectFetcher(redirectUrl));
+	if (handleRedirect(url, res, restoreSaved, resolve, reject, redirectFetcher, logPrefix)) {
 		return;
 	}
 
-	const encoding = res.headers["content-encoding"] || "";
-	let readableStream: stream.Readable = res;
-	if (encoding.includes("br")) {
-		readableStream = res.pipe(zlib.createBrotliDecompress());
-	} else if (encoding.includes("gzip")) {
-		readableStream = res.pipe(zlib.createGunzip());
-	} else if (encoding.includes("deflate")) {
-		readableStream = res.pipe(zlib.createInflate());
-	}
+	const readable = pipeDecompress(res);
 
-	const chunks: Buffer[] = [];
-	readableStream.on("data", (chunk: Buffer) => {
-		chunks.push(chunk);
-	});
-	readableStream.on("end", () => {
-		const body = Buffer.concat(chunks).toString("utf8");
-		console.log(`${logPrefix} 响应体:`, url, `status=${res.statusCode}`, `body.length=${body.length}`);
-
-		restoreProxyEnv(restoreSaved);
-
-		if (isCfChallenge(body)) {
-			console.log(`${logPrefix} 检测到 Cloudflare 挑战`);
-			reject(new CfError(url));
-			return;
+	void readBody(readable).then(
+		(body) => {
+			restoreProxyEnv(restoreSaved);
+			console.log(`${logPrefix} 响应体:`, url, `status=${res.statusCode}`, `body.length=${body.length}`);
+			handleBody(url, res, body, resolve, reject, logPrefix);
+		},
+		(err) => {
+			restoreProxyEnv(restoreSaved);
+			reject(err);
 		}
-		if (res.statusCode === 403) {
-			const broad = ["Cloudflare", "challenge", "attention required"].some((p) => body.toLowerCase().includes(p));
-			if (broad) {
-				console.log(`${logPrefix} 403 + 泛化 CF 特征，判定为 Cloudflare 挑战`);
-				reject(new CfError(url));
-			} else {
-				console.log(`${logPrefix} 403 但非 CF，可能 Cookie 无效`);
-				reject(new Error(t("err.http403")));
-			}
-			return;
-		}
-		if (isLoginPage(body)) {
-			console.log(`${logPrefix} 检测到登录页面`);
-			reject(new LoginRequiredError(url));
-			return;
-		}
-		if (res.statusCode !== 200) {
-			if (res.statusCode === 404) {
-				if (!sessionCookie) {
-					console.log(`${logPrefix} 404 且无 Cookie，需要登录`);
-					reject(new Error(t("err.http404NoCookie")));
-					return;
-				}
-				const rejectCookieInvalid = () => {
-					console.log(`${logPrefix} 404 但有 Cookie，可能 Cookie 无效`);
-					reject(new Error(t("err.http404BadCookie")));
-				};
-				const contest = extractContestFromUrl(url);
-				if (!contest) {
-					rejectCookieInvalid();
-					return;
-				}
-				void isContestStarted(contest).then((started) => {
-					if (started === false) {
-						console.log(`${logPrefix} 404 且比赛未开始，题目未公开: ${url}`);
-						reject(new Error(t("err.http404NotStarted", { contest })));
-					} else {
-						rejectCookieInvalid();
-					}
-				});
-				return;
-			}
-			console.log(`${logPrefix} 非 200 状态码:`, res.statusCode);
-			reject(new Error(t("err.httpStatus", { status: res.statusCode })));
-			return;
-		}
-
-		console.log(`${logPrefix} 请求成功:`, url, `body.length=${body.length}`);
-		resolve(body);
-	});
-	readableStream.on("error", (err: Error) => {
-		restoreProxyEnv(restoreSaved);
-		reject(err);
-	});
+	);
 }
 
 export function fetchText(url: string, opts?: { withCookie?: boolean }): Promise<string> {

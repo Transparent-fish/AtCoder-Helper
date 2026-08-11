@@ -122,7 +122,7 @@ pnpm clean          # 清理构建产物
 
 - 文件名：组件 PascalCase，工具 camelCase
 - TypeScript：优先 `interface`，避免 `any`
-- 函数不超过 **120 行**（可适当放宽至 130）
+- ts 函数不超过 **80 行**；tsx 文件不超过 **600 行**
 - 导入顺序：外部 → 内部包 → 相对路径
 
 ## 发布

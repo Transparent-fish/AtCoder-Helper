@@ -49,29 +49,10 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          overages=""
-          while IFS= read -r file; do
-            if [ -f "$file" ]; then
-              results=$(node -e "
-                var fs=require('fs');
-                var lines=fs.readFileSync('$file','utf-8').split('\n');
-                var start=-1,name='';
-                for(var i=0;i<lines.length;i++){
-                  var m=lines[i].match(/^\s*(export\s+)?(async\s+)?function\s+(\w+)/);
-                  if(m){
-                    if(start>=0){
-                      var cnt=i-start;
-                      if(cnt>80)console.log(name+' in $file ('+cnt+' lines, line '+(start+1)+')');
-                    }
-                    start=i;name=m[3];
-                  }
-                }
-              ")
-              if [ -n "$results" ]; then overages="$overages"$'\n'"$results"; fi
-            fi
-          done < <(find apps packages -name "*.ts" -o -name "*.tsx")
-          echo "$overages" | tee linelength_output.txt
-          if [ -z "$overages" ]; then echo "passed=true" >> $GITHUB_OUTPUT; else echo "passed=false" >> $GITHUB_OUTPUT; fi
+          set -o pipefail
+          node scripts/check-functions.mjs 2>&1 | tee linelength_output.txt
+          status=$?
+          if [ "$status" -eq 0 ]; then echo "passed=true" >> $GITHUB_OUTPUT; else echo "passed=false" >> $GITHUB_OUTPUT; fi
 
       - name: Collect results & logs
         shell: bash
@@ -83,9 +64,10 @@ jobs:
             echo "test=${{ steps.test.outcome }}"
             echo "ll=${{ steps.linelength.outputs.passed }}"
           } > artifact/results.txt
-          for f in lint build test linelength; do
+          for f in lint build test; do
             if [ -f "${f}_output.txt" ]; then tail -n 40 "${f}_output.txt" > "artifact/logs/${f}_output.txt"; fi
           done
+          if [ -f linelength_output.txt ]; then cp linelength_output.txt artifact/logs/linelength_output.txt; fi
 
       - uses: actions/upload-artifact@v4
         with:
@@ -128,7 +110,7 @@ jobs:
           if [ "$lint" = "success" ]; then echo "| \`pnpm lint\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm lint\` | :x: |" >> comment.md; fi
           if [ "$build" = "success" ]; then echo "| \`pnpm build\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm build\` | :x: |" >> comment.md; fi
           if [ "$test" = "success" ]; then echo "| \`pnpm test:unit\` | :white_check_mark: |" >> comment.md; else echo "| \`pnpm test:unit\` | :x: |" >> comment.md; fi
-          if [ "$ll" = "true" ]; then echo "| 函数 <= 80 行 | :white_check_mark: |" >> comment.md; else echo "| 函数 <= 80 行 | :x: |" >> comment.md; fi
+          if [ "$ll" = "true" ]; then echo "| 函数 ≤ 80 行 / tsx ≤ 600 行 | :white_check_mark: |" >> comment.md; else echo "| 函数 ≤ 80 行 / tsx ≤ 600 行 | :x: |" >> comment.md; fi
 
           echo "" >> comment.md
           echo "### 未通过的检查" >> comment.md
@@ -138,7 +120,7 @@ jobs:
           if [ "$lint" != "success" ]; then echo "- [ ] \`pnpm lint\`" >> comment.md; any_fail=true; fi
           if [ "$build" != "success" ]; then echo "- [ ] \`pnpm build\`" >> comment.md; any_fail=true; fi
           if [ "$test" != "success" ]; then echo "- [ ] \`pnpm test:unit\`" >> comment.md; any_fail=true; fi
-          if [ "$ll" != "true" ]; then echo "- [ ] 函数长度不超过 80 行" >> comment.md; any_fail=true; fi
+          if [ "$ll" != "true" ]; then echo "- [ ] 函数 > 80 行 或 tsx 文件 > 600 行" >> comment.md; any_fail=true; fi
 
           if [ "$any_fail" = false ]; then
             echo "全部通过，无需修改。" >> comment.md
@@ -148,22 +130,22 @@ jobs:
             echo "" >> comment.md
 
             append_log() {
-              local label="$1" logfile="$2"
+              local label="$1" logfile="$2" full="$3"
               if [ -f "$logfile" ] && [ -s "$logfile" ]; then
-                echo "<details><summary>$label（最后 40 行）</summary>" >> comment.md
+                echo "<details><summary>$label</summary>" >> comment.md
                 echo "" >> comment.md
                 echo '```' >> comment.md
-                cat "$logfile" >> comment.md
+                if [ "$full" = "true" ]; then cat "$logfile" >> comment.md; else tail -n 40 "$logfile" >> comment.md; fi
                 echo '```' >> comment.md
                 echo "</details>" >> comment.md
                 echo "" >> comment.md
               fi
             }
 
-            [ "$lint" != "success" ] && append_log "\`pnpm lint\`" "results/logs/lint_output.txt"
-            [ "$build" != "success" ] && append_log "\`pnpm build\`" "results/logs/build_output.txt"
-            [ "$test" != "success" ] && append_log "\`pnpm test:unit\`" "results/logs/test_output.txt"
-            [ "$ll" != "true" ] && append_log "函数长度 <= 80 行" "results/logs/linelength_output.txt"
+            [ "$lint" != "success" ] && append_log "\`pnpm lint\`" "results/logs/lint_output.txt" "false"
+            [ "$build" != "success" ] && append_log "\`pnpm build\`" "results/logs/build_output.txt" "false"
+            [ "$test" != "success" ] && append_log "\`pnpm test:unit\`" "results/logs/test_output.txt" "false"
+            [ "$ll" != "true" ] && append_log "行数限制（超限清单）" "results/logs/linelength_output.txt" "true"
           fi
 
           echo "" >> comment.md

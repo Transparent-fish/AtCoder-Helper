@@ -85,8 +85,11 @@ VS Code 插件，支持浏览 AtCoder 竞赛题目、LaTeX 数学公式渲染、
 ├── docs/
 │   └── Standard.md              # 编码规范
 │
+├── scripts/
+│   └── check-functions.mjs      # 行数检查（ts 函数 ≤80 行 / tsx 文件 ≤600 行）
+│
 ├── .github/workflows/
-│   └── pr-review.yml            # PR CI：lint + build + test
+│   └── pr-review.yml            # PR CI：lint + build + test + 行数检查
 │
 ├── release/
 │   └── extension.vsix           # 打包输出
@@ -155,7 +158,7 @@ pnpm clean          # 清理构建产物
 
 - 文件名：组件 PascalCase，工具 camelCase
 - TypeScript：优先 `interface`，避免 `any`
-- 函数不超过 **120 行**（可适当放宽至 130）
+- ts 函数不超过 **80 行**；tsx 文件不超过 **600 行**（CI 用 `scripts/check-functions.mjs` 检查）
 - 导入顺序：外部 → 内部包 → 相对路径
 
 ## 发布
