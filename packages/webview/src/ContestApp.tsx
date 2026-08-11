@@ -345,9 +345,6 @@ const ContestApp: React.FC<ContestAppProps> = ({ initContest = "" }) => {
                         >
                             {t("ui.browserOpen")}
                         </Button>
-                        <Button onClick={handleFetchSubmitPage} disabled={isLoading} size="sm" className="h-[26px] text-[11px]">
-                            {submitTasks.length === 0 ? (isLoading ? t("ui.fetching") : t("ui.fetchSubmitPage")) : t("ui.refresh")}
-                        </Button>
                     </div>
                 </div>
 
