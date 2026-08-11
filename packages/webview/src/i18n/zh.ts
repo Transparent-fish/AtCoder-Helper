@@ -51,6 +51,7 @@ export const zh = {
     "ui.submit": "提交",
     "ui.submitting": "提交中...",
     "ui.fetching": "获取中...",
+    "ui.fetchSubmitPage": "获取提交页面",
     "ui.openInBrowser": "在浏览器中打开",
     "ui.browserOpen": "浏览器打开",
     "ui.fetchingData": "正在抓取数据...",

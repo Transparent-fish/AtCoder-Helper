@@ -56,6 +56,7 @@ export const en: Record<keyof ZhDict, string> = {
     "ui.submit": "Submit",
     "ui.submitting": "Submitting...",
     "ui.fetching": "Fetching...",
+    "ui.fetchSubmitPage": "Fetch submit page",
     "ui.openInBrowser": "Open in Browser",
     "ui.browserOpen": "Open in browser",
     "ui.fetchingData": "Fetching data...",
