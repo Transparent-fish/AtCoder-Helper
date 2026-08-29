@@ -5,12 +5,13 @@ import * as zlib from "zlib";
 import * as net from "net";
 import * as tls from "tls";
 import { SubRecord } from "./types"
+import { t } from "./i18n"
 
 
 export class CfError extends Error {
 	url: string;
 	constructor(url: string) {
-		super(`AtCoder 触发了 Cloudflare 验证，插件无法绕过。请在浏览器中直接访问 AtCoder。\nURL: ${url}`);
+		super(t("err.cf", { url }));
 		this.name = "CfError";
 		this.url = url;
 	}
@@ -18,14 +19,7 @@ export class CfError extends Error {
 
 export class ProxyError extends Error {
 	constructor() {
-		super(
-			`网络代理连接失败，无法访问 AtCoder。\n` +
-			`可能原因：在 WSL 2 中，代理地址 127.0.0.1 指向 WSL 而非 Windows 宿主机。\n` +
-			`解决方案：\n` +
-			`  1. 在 WSL 中执行: export NO_PROXY=.atcoder.jp\n` +
-			`  2. 或设置正确的宿主机 IP: export HTTPS_PROXY=http://$(hostname).local:7897\n` +
-			`  3. 或连接 Windows 宿主机的 WSL 网关 IP（查看 /etc/resolv.conf）`
-		);
+		super(t("err.proxy"));
 		this.name = "ProxyError";
 	}
 }
@@ -33,14 +27,7 @@ export class ProxyError extends Error {
 export class LoginRequiredError extends Error {
 	url: string;
 	constructor(url: string) {
-		super(
-			`访问需要登录，请设置 AtCoder Cookie。\n` +
-			`获取方法：\n` +
-			`  1. 在浏览器中登录 https://atcoder.jp\n` +
-			`  2. 按 F12 打开开发者工具 → Application → Cookies\n` +
-			`  3. 找到 atcoder.jp 下的 REVEL_SESSION，复制其 Value\n` +
-			`  4. 在插件设置中输入: REVEL_SESSION=复制的值`
-		);
+		super(t("err.login"));
 		this.name = "LoginRequiredError";
 		this.url = url;
 	}
@@ -222,6 +209,123 @@ function isContestStarted(contest: string): Promise<boolean | null> {
 		.catch(() => null);
 }
 
+function handleRedirect(
+	url: string,
+	res: http.IncomingMessage,
+	restoreSaved: Record<string, string | undefined>,
+	resolve: (value: string | PromiseLike<string>) => void,
+	reject: (reason: unknown) => void,
+	redirectFetcher: (url: string) => Promise<string>,
+	logPrefix: string,
+): boolean {
+	if (!res.statusCode || res.statusCode < 300 || res.statusCode >= 400 || !res.headers.location) {
+		return false;
+	}
+	const redirectUrl = new URL(res.headers.location, url).href;
+	console.log(`${logPrefix} 重定向:`, res.statusCode, `->`, redirectUrl);
+	restoreProxyEnv(restoreSaved);
+	if (redirectUrl.includes("/login")) {
+		console.log(`${logPrefix} 检测到登录重定向`);
+		reject(new LoginRequiredError(redirectUrl));
+	} else {
+		resolve(redirectFetcher(redirectUrl));
+	}
+	return true;
+}
+
+function pipeDecompress(res: http.IncomingMessage): stream.Readable {
+	const encoding = res.headers["content-encoding"] || "";
+	if (encoding.includes("br")) return res.pipe(zlib.createBrotliDecompress());
+	if (encoding.includes("gzip")) return res.pipe(zlib.createGunzip());
+	if (encoding.includes("deflate")) return res.pipe(zlib.createInflate());
+	return res;
+}
+
+function readBody(readable: stream.Readable): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const chunks: Buffer[] = [];
+		readable.on("data", (chunk: Buffer) => {
+			chunks.push(chunk);
+		});
+		readable.on("end", () => {
+			resolve(Buffer.concat(chunks).toString("utf8"));
+		});
+		readable.on("error", reject);
+	});
+}
+
+function handleNon200(
+	url: string,
+	statusCode: number | undefined,
+	reject: (reason: unknown) => void,
+	logPrefix: string,
+): void {
+	if (statusCode !== 404) {
+		console.log(`${logPrefix} 非 200 状态码:`, statusCode);
+		reject(new Error(t("err.httpStatus", { status: statusCode })));
+		return;
+	}
+	if (!sessionCookie) {
+		console.log(`${logPrefix} 404 且无 Cookie，需要登录`);
+		reject(new Error(t("err.http404NoCookie")));
+		return;
+	}
+	const rejectCookieInvalid = () => {
+		console.log(`${logPrefix} 404 但有 Cookie，可能 Cookie 无效`);
+		reject(new Error(t("err.http404BadCookie")));
+	};
+	const contest = extractContestFromUrl(url);
+	if (!contest) {
+		rejectCookieInvalid();
+		return;
+	}
+	void isContestStarted(contest).then((started) => {
+		if (started === false) {
+			console.log(`${logPrefix} 404 且比赛未开始，题目未公开: ${url}`);
+			reject(new Error(t("err.http404NotStarted", { contest })));
+		} else {
+			rejectCookieInvalid();
+		}
+	});
+}
+
+function handleBody(
+	url: string,
+	res: http.IncomingMessage,
+	body: string,
+	resolve: (value: string | PromiseLike<string>) => void,
+	reject: (reason: unknown) => void,
+	logPrefix: string,
+): void {
+	if (isCfChallenge(body)) {
+		console.log(`${logPrefix} 检测到 Cloudflare 挑战`);
+		reject(new CfError(url));
+		return;
+	}
+	if (res.statusCode === 403) {
+		const broad = ["Cloudflare", "challenge", "attention required"].some((p) => body.toLowerCase().includes(p));
+		if (broad) {
+			console.log(`${logPrefix} 403 + 泛化 CF 特征，判定为 Cloudflare 挑战`);
+			reject(new CfError(url));
+		} else {
+			console.log(`${logPrefix} 403 但非 CF，可能 Cookie 无效`);
+			reject(new Error(t("err.http403")));
+		}
+		return;
+	}
+	if (isLoginPage(body)) {
+		console.log(`${logPrefix} 检测到登录页面`);
+		reject(new LoginRequiredError(url));
+		return;
+	}
+	if (res.statusCode !== 200) {
+		handleNon200(url, res.statusCode, reject, logPrefix);
+		return;
+	}
+	console.log(`${logPrefix} 请求成功:`, url, `body.length=${body.length}`);
+	resolve(body);
+}
+
 function handleResponse(
 	url: string,
 	res: http.IncomingMessage,
@@ -233,98 +337,23 @@ function handleResponse(
 ) {
 	console.log(`${logPrefix} 收到响应:`, url, `status=${res.statusCode}`);
 
-	if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-		const redirectUrl = new URL(res.headers.location, url).href;
-		console.log(`${logPrefix} 重定向:`, res.statusCode, `->`, redirectUrl);
-		restoreProxyEnv(restoreSaved);
-		if (redirectUrl.includes("/login")) {
-			console.log(`${logPrefix} 检测到登录重定向`);
-			reject(new LoginRequiredError(redirectUrl));
-			return;
-		}
-		resolve(redirectFetcher(redirectUrl));
+	if (handleRedirect(url, res, restoreSaved, resolve, reject, redirectFetcher, logPrefix)) {
 		return;
 	}
 
-	const encoding = res.headers["content-encoding"] || "";
-	let readableStream: stream.Readable = res;
-	if (encoding.includes("br")) {
-		readableStream = res.pipe(zlib.createBrotliDecompress());
-	} else if (encoding.includes("gzip")) {
-		readableStream = res.pipe(zlib.createGunzip());
-	} else if (encoding.includes("deflate")) {
-		readableStream = res.pipe(zlib.createInflate());
-	}
+	const readable = pipeDecompress(res);
 
-	const chunks: Buffer[] = [];
-	readableStream.on("data", (chunk: Buffer) => {
-		chunks.push(chunk);
-	});
-	readableStream.on("end", () => {
-		const body = Buffer.concat(chunks).toString("utf8");
-		console.log(`${logPrefix} 响应体:`, url, `status=${res.statusCode}`, `body.length=${body.length}`);
-
-		restoreProxyEnv(restoreSaved);
-
-		if (isCfChallenge(body)) {
-			console.log(`${logPrefix} 检测到 Cloudflare 挑战`);
-			reject(new CfError(url));
-			return;
+	void readBody(readable).then(
+		(body) => {
+			restoreProxyEnv(restoreSaved);
+			console.log(`${logPrefix} 响应体:`, url, `status=${res.statusCode}`, `body.length=${body.length}`);
+			handleBody(url, res, body, resolve, reject, logPrefix);
+		},
+		(err) => {
+			restoreProxyEnv(restoreSaved);
+			reject(err);
 		}
-		if (res.statusCode === 403) {
-			const broad = ["Cloudflare", "challenge", "attention required"].some((p) => body.toLowerCase().includes(p));
-			if (broad) {
-				console.log(`${logPrefix} 403 + 泛化 CF 特征，判定为 Cloudflare 挑战`);
-				reject(new CfError(url));
-			} else {
-				console.log(`${logPrefix} 403 但非 CF，可能 Cookie 无效`);
-				reject(new Error(`访问被拒绝 (403)。Cookie 可能无效或已过期，请重新登录 AtCoder 获取新的 REVEL_SESSION`));
-			}
-			return;
-		}
-		if (isLoginPage(body)) {
-			console.log(`${logPrefix} 检测到登录页面`);
-			reject(new LoginRequiredError(url));
-			return;
-		}
-		if (res.statusCode !== 200) {
-			if (res.statusCode === 404) {
-				if (!sessionCookie) {
-					console.log(`${logPrefix} 404 且无 Cookie，需要登录`);
-					reject(new Error(`访问失败 (404)。题目不存在或需要登录，请先设置 AtCoder Cookie。`));
-					return;
-				}
-				const rejectCookieInvalid = () => {
-					console.log(`${logPrefix} 404 但有 Cookie，可能 Cookie 无效`);
-					reject(new Error(`访问失败 (404)。Cookie 可能无效或已过期，请重新登录 AtCoder 获取新的 REVEL_SESSION`));
-				};
-				const contest = extractContestFromUrl(url);
-				if (!contest) {
-					rejectCookieInvalid();
-					return;
-				}
-				void isContestStarted(contest).then((started) => {
-					if (started === false) {
-						console.log(`${logPrefix} 404 且比赛未开始，题目未公开: ${url}`);
-						reject(new Error(`访问失败 (404)。比赛「${contest}」尚未开始，题目还未公开，请等待开赛后再试。`));
-					} else {
-						rejectCookieInvalid();
-					}
-				});
-				return;
-			}
-			console.log(`${logPrefix} 非 200 状态码:`, res.statusCode);
-			reject(new Error(`Request failed with status ${res.statusCode}`));
-			return;
-		}
-
-		console.log(`${logPrefix} 请求成功:`, url, `body.length=${body.length}`);
-		resolve(body);
-	});
-	readableStream.on("error", (err: Error) => {
-		restoreProxyEnv(restoreSaved);
-		reject(err);
-	});
+	);
 }
 
 export function fetchText(url: string, opts?: { withCookie?: boolean }): Promise<string> {
@@ -371,7 +400,7 @@ function fetchTextOnce(url: string, withCookie: boolean): Promise<string> {
 				reject(new ProxyError());
 				return;
 			}
-			reject(new Error(`网络错误: ${err.message}`));
+			reject(new Error(t("err.network", { msg: err.message })));
 		});
 	});
 }
@@ -413,7 +442,7 @@ export function fetchTextPost(url: string, body: string): Promise<string> {
 				reject(new ProxyError());
 				return;
 			}
-			reject(new Error(`网络错误: ${err.message}`));
+			reject(new Error(t("err.network", { msg: err.message })));
 		});
 	});
 }

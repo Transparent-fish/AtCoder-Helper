@@ -18,6 +18,7 @@ export function getWebviewContent(
     if (initSubmissionId) {
         globals.push(`window.__ATCODER_SUBMISSION_ID__ = ${JSON.stringify(initSubmissionId)};`);
     }
+    globals.push(`window.__ATCODER_LOCALE__ = ${JSON.stringify(vscode.env.language)};`);
     const initScript = globals.length > 0 ? `<script>${globals.join("")}</script>` : "";
     return `<!DOCTYPE html>
   <html lang="en">

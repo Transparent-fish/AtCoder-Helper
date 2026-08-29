@@ -1,4 +1,5 @@
 import { fetchText, fetchTextPost, CfError } from "./fetch";
+import { t } from "./i18n";
 
 export interface LanguageOption {
     id: string;
@@ -85,7 +86,7 @@ export async function fetchSubmitPage(contest: string): Promise<SubmitPage> {
     }
 
     if (!csrfToken || (tasks.length === 0 && langOptions.length === 0)) {
-        throw new Error("无法获取提交页面：比赛可能已结束，或提交页面结构发生了变化。");
+        throw new Error(t("submit.pageFetchFailed"));
     }
 
     const seen = new Set<string>();
@@ -129,18 +130,18 @@ export async function submitCode(contest: string, taskScreenName: string, langua
     if (responseHtml.includes("/submissions/me") || responseHtml.includes("Submission")) {
         return {
             success: true,
-            message: "代码提交成功",
+            message: t("submit.success"),
             url: `https://atcoder.jp/contests/${contest}/submissions/me`,
         };
     }
 
-    return { success: false, message: "提交失败，请检查 Cookie 是否有效" };
+    return { success: false, message: t("submit.failed") };
 }
 
 export async function submitCodeWithRedirect(contest: string, taskScreenName: string, languageId: string, sourceCode: string): Promise<SubmitStatus> {
     const pageData = await fetchSubmitPage(contest);
     if (!pageData.csrfToken) {
-        return { success: false, message: "无法获取 CSRF Token，请检查 Cookie 是否有效" };
+        return { success: false, message: t("submit.noCsrf") };
     }
     return await submitCode(contest, taskScreenName, languageId, sourceCode, pageData.csrfToken);
 }

@@ -24,7 +24,7 @@
     "commands": [
       {
         "command": "extension.showWebview",
-        "title": "AtCoder Helper（编辑器）"
+        "title": "AtCoder Helper (Editor)"
       },
       {
         "command": "extension.setDeeplApiKey",
@@ -60,6 +60,7 @@
     "watch": "webpack --mode development --watch --progress",
     "dev": "webpack --mode development --watch --progress",
     "test": "node ./out/test/runTest.js",
+    "test:unit": "tsc -p tsconfig.test.json && node out-test/atcoder.test.js",
     "lint": "eslint src --ext ts",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf out",
     "package": "vsce package --no-dependencies --allow-missing-repository --out ../../release/extension.vsix"

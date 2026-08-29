@@ -5,6 +5,7 @@ import { runCommand } from "./tools/command";
 import { IncomingMessage } from "./tools/types";
 import { getWebviewContent } from "./tools/webview";
 import { AtCoderViewProvider } from "./viewProvider";
+import { init, t } from "./tools/i18n";
 
 let sidebarViewProvider: AtCoderViewProvider | undefined;
 
@@ -39,27 +40,27 @@ export async function pullSubmitStatu(contest: string, taskName: string, send: (
       send({ type: "statusUpdate", statuses: Object.fromEntries(statusMap) });
       const status = statusMap.get(taskName);
       if (status && judgeStatus.has(status)) {
-        send({ type: "update", text: `评测结果: ${status}` });
+        send({ type: "update", text: t("ext.judgeResult", { status }) });
         return;
       }
     } catch {
       //单次轮询失败,直接下一次
     }
   }
-  send({ type: "update", text: "评测超时，请稍后手动刷新查看结果" });
+  send({ type: "update", text: t("ext.judgeTimeout") });
 }
 
 function registerSetDeeplApiKey(context: vscode.ExtensionContext) {
   return vscode.commands.registerCommand("extension.setDeeplApiKey", async () => {
     const key = await vscode.window.showInputBox({
-      prompt: "请输入 DeepL API Key",
+      prompt: t("ext.promptDeeplKey"),
       password: true,
-      placeHolder: "例如 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:fx",
+      placeHolder: t("ext.placeholderDeeplKey"),
       ignoreFocusOut: true,
     });
     if (key?.trim()) {
       await context.secrets.store("deeplApiKey", key.trim());
-      vscode.window.showInformationMessage("DeepL API Key 已保存");
+      vscode.window.showInformationMessage(t("ext.deeplKeySaved"));
     }
   });
 }
@@ -67,9 +68,9 @@ function registerSetDeeplApiKey(context: vscode.ExtensionContext) {
 function registerSetAtCoderCookie(context: vscode.ExtensionContext) {
   return vscode.commands.registerCommand("extension.setAtCoderCookie", async () => {
     const cookie = await vscode.window.showInputBox({
-      prompt: "粘贴 AtCoder 的 Cookie（仅需 REVEL_SESSION）",
+      prompt: t("ext.promptCookie"),
       password: true,
-      placeHolder: "REVEL_SESSION=abcdef1234567890abcdef1234567890",
+      placeHolder: t("ext.placeholderCookie"),
       ignoreFocusOut: true,
     });
     if (!cookie?.trim()) return;
@@ -77,23 +78,23 @@ function registerSetAtCoderCookie(context: vscode.ExtensionContext) {
     if (!trimmed.startsWith("REVEL_SESSION=")) {
       const fix = `REVEL_SESSION=${trimmed}`;
       const choice = await vscode.window.showWarningMessage(
-        `Cookie 格式似乎不正确，是否添加 REVEL_SESSION= 前缀？`,
+        t("ext.cookieFormatWarn"),
         { modal: false },
-        "自动修复",
-        "取消"
+        t("ext.autoFix"),
+        t("ext.cancel")
       );
-      if (choice === "自动修复") {
+      if (choice === t("ext.autoFix")) {
         await context.secrets.store("atcoderCookie", fix);
         setSessionCookie(fix);
         notifyCookieChanged(true);
-        vscode.window.showInformationMessage("AtCoder Cookie 已保存并自动修复格式");
+        vscode.window.showInformationMessage(t("ext.cookieSavedFixed"));
       }
       return;
     }
     await context.secrets.store("atcoderCookie", trimmed);
     setSessionCookie(trimmed);
     notifyCookieChanged(true);
-    vscode.window.showInformationMessage("AtCoder Cookie 已保存");
+    vscode.window.showInformationMessage(t("ext.cookieSaved"));
   });
 }
 
@@ -168,7 +169,7 @@ export function openContestPanel(context: vscode.ExtensionContext, contest: stri
 export function openSubmissionPanel(context: vscode.ExtensionContext, contest: string, id: string) {
   const panel = vscode.window.createWebviewPanel(
     "atcoderSubmission",
-    `提交 ${id} - ${contest}`,
+    t("ext.submissionPanelTitle", { id, contest }),
     vscode.ViewColumn.One,
     {
       enableScripts: true,
@@ -201,6 +202,7 @@ export function openSubmissionPanel(context: vscode.ExtensionContext, contest: s
 
 export async function activate(context: vscode.ExtensionContext) {
   log.info("Extension is now active!");
+  init(vscode.env.language);
 
   setStaleCookieHandler(() => {
     // vscode.window.showWarningMessage(

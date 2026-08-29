@@ -55,7 +55,7 @@ Entry: `packages/webview/src/index.tsx` → `WebviewApp.tsx`. Uses Tailwind CSS 
 
 - 4-space indent, no `export default`, prefer `interface` over `type`
 - No `any` — use `unknown` instead
-- Functions max 120 lines (CI enforces 130 hard limit)
+- Functions max 80 lines (CI enforces 80 hard limit)
 - Import order: external deps → `@template/*` packages → relative paths
 - Component files: PascalCase. Tool/utility files: camelCase
 - Error handling: use `CfError`/`ProxyError`/`LoginRequiredError`, never bare `throw new Error()`
@@ -64,7 +64,7 @@ Entry: `packages/webview/src/index.tsx` → `WebviewApp.tsx`. Uses Tailwind CSS 
 
 ## CI
 
-PR to `main` triggers: lint → build → test → function length check (>130 lines fails). Results posted as PR comment.
+PR to `main` triggers: lint → build → test → function length check (>80 lines fails). Results posted as PR comment.
 
 ## Git Branch Rules (Claude MUST follow)
 

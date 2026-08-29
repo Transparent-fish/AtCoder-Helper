@@ -2,6 +2,7 @@ import * as https from "https";
 import * as http from "http";
 import * as stream from "stream";
 import * as zlib from "zlib";
+import { t } from "./i18n";
 
 const MAX_ATTEMPTS = 3;
 const RATE_LIMIT_MARKERS = ["slow down please", "page load error", "too many requests"];
@@ -63,7 +64,7 @@ function requestDeepL(options: https.RequestOptions, postData: string): Promise<
             );
         });
 
-        req.setTimeout(20000, () => req.destroy(new Error("翻译请求超时")));
+        req.setTimeout(20000, () => req.destroy(new Error(t("deepl.timeout"))));
         req.on("error", (err: Error) => settle(() => reject(err)));
         req.write(postData);
         req.end();
@@ -123,13 +124,13 @@ function logUnexpectedResponse(prefix: string, res: RawResponse): void {
 
 function buildTranslateError(statusCode: number | undefined, body: string): Error {
     if (statusCode === 429 || isRateLimitHtml(body)) {
-        return new Error("DeepL 翻译被限流（HTTP 429），请稍后再试");
+        return new Error(t("deepl.rateLimited"));
     }
     const json = parseTranslateJson(body);
     if (json && typeof json.message === "string") {
         return new Error(json.message);
     }
-    return new Error(`翻译接口返回异常（HTTP ${statusCode ?? "?"}，响应非 JSON：${preview(body)}）`);
+    return new Error(t("deepl.httpError", { status: statusCode ?? "?" }));
 }
 
 export async function translateTextFree(text: string, lang: string): Promise<string> {
@@ -176,7 +177,7 @@ export async function translateTextFree(text: string, lang: string): Promise<str
         return translated;
     }
     logUnexpectedResponse("免费翻译响应结构异常", res);
-    throw new Error(`翻译接口返回异常：响应结构无法识别（${preview(res.body)}）`);
+    throw new Error(t("deepl.unexpectedStructure"));
 }
 
 export async function translateTextRaw(text: string, targetLang: string, apiKey: string): Promise<string> {
@@ -205,5 +206,5 @@ export async function translateTextRaw(text: string, targetLang: string, apiKey:
         return translated;
     }
     logUnexpectedResponse("API 响应结构异常", res);
-    throw new Error(`翻译接口返回异常：响应结构无法识别（${preview(res.body)}）`);
+    throw new Error(t("deepl.unexpectedStructure"));
 }

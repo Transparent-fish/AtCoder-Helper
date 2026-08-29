@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { copyMarkdown } from "./copy";
 import { IncomingMessage } from "./types";
 import { openContestPanel, openSubmissionPanel } from "../extension"
+import { t } from "./i18n";
 import {
   handleContestLoad,
   handleProblemLoad,
@@ -32,7 +33,7 @@ export async function runCommand(message: IncomingMessage, context: vscode.Exten
   else if (problemCommands.has(message.command!)) await runProblem(message, context, sendToWebview);
   else if (submitCommands.has(message.command!)) await runSubmit(message, context, sendToWebview);
   else if (contestCommands.has(message.command!)) await runContest(message, context, sendToWebview);
-  else throw new Error("unknown command");
+  else throw new Error(t("cmd.unknown"));
 }
 
 async function runContest(command: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,): Promise<boolean> {
@@ -89,7 +90,7 @@ async function runProblem(command: IncomingMessage, context: vscode.ExtensionCon
     case "copyMarkdown":
       if (command.problem) {
         await vscode.env.clipboard.writeText(copyMarkdown(command.problem));
-        sendToWebview({ type: "update", text: "已复制到剪贴板" });
+        sendToWebview({ type: "update", text: t("cmd.copied") });
       }
       return true;
     case "alert":
@@ -127,7 +128,7 @@ async function runDeepL(command: IncomingMessage, context: vscode.ExtensionConte
     case "setApiKey":
       if (command.text?.trim()) {
         await context.secrets.store("deeplApiKey", command.text.trim());
-        vscode.window.showInformationMessage("DeepL API Key 已保存");
+        vscode.window.showInformationMessage(t("ext.deeplKeySaved"));
       }
       return true;
     default:
