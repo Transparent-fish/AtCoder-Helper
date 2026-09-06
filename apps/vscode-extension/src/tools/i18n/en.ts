@@ -86,8 +86,10 @@ export const en: Record<keyof ZhDict, string> = {
     "err.network": "Network error: {msg}",
 
     "deepl.tooFrequent": "Too many translation requests, please try again later",
+    "deepl.rateLimited": "DeepL translation is rate limited (HTTP 429), please try again later",
     "deepl.httpError": "Translation API error ({status})",
     "deepl.badResponse": "Translation API returned an unexpected response",
+    "deepl.unexpectedStructure": "Translation API returned an unrecognized response structure",
     "deepl.timeout": "Translation request timed out",
     "deepl.failed": "Translation request failed: {msg}",
     "deepl.failedSimple": "Translation request failed",

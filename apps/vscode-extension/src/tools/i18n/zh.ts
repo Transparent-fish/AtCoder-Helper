@@ -84,8 +84,10 @@ export const zh = {
     "err.network": "网络错误: {msg}",
 
     "deepl.tooFrequent": "翻译请求过于频繁，请稍后再试",
+    "deepl.rateLimited": "DeepL 翻译被限流（HTTP 429），请稍后再试",
     "deepl.httpError": "翻译接口错误 ({status})",
     "deepl.badResponse": "翻译接口返回异常",
+    "deepl.unexpectedStructure": "翻译接口返回异常：响应结构无法识别",
     "deepl.timeout": "翻译请求超时",
     "deepl.failed": "翻译请求失败: {msg}",
     "deepl.failedSimple": "翻译请求失败",
