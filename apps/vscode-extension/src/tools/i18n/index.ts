@@ -1,17 +1,18 @@
 import { zh } from "./zh";
 import { en } from "./en";
+import { ja } from "./ja";
 import type { ZhDict } from "./zh";
 
 type Dict = Record<string, string>;
 
-const dicts: Record<string, Dict> = { zh, en };
+const dicts: Record<string, Dict> = { zh, en, ja };
 const fallback: Dict = en;
 
 let currentLang = "en";
 
 export function init(language: string): void {
     const lang = (language || "en").toLowerCase();
-    currentLang = lang.startsWith("zh") ? "zh" : "en";
+    currentLang = lang.startsWith("zh") ? "zh" : lang.startsWith("ja") ? "ja" : "en";
 }
 
 export type I18nKey = keyof ZhDict;
