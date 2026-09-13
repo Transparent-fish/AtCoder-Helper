@@ -1,16 +1,16 @@
 import React, { createContext, useContext, useMemo, useState } from "react";
 import { zh } from "./zh";
 import { en } from "./en";
-import type { ZhDict } from "./zh";
+import { ja } from "./ja";
 
 type Dict = Record<string, string>;
 
-const dicts: Record<string, Dict> = { zh, en };
+const dicts: Record<string, Dict> = { zh, en, ja };
 const fallback: Dict = en;
 
 function detectLocale(): string {
     const lang = (window.__ATCODER_LOCALE__ || navigator.language || "en").toLowerCase();
-    return lang.startsWith("zh") ? "zh" : "en";
+    return lang.startsWith("zh") ? "zh" : lang.startsWith("ja") ? "ja" : "en";
 }
 
 export interface I18nValue {

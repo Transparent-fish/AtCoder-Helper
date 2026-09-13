@@ -206,7 +206,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   setStaleCookieHandler(() => {
     // vscode.window.showWarningMessage(
-    //   "检测到 AtCoder Cookie 可能已过期：已临时使用无 Cookie 访问公开页面。如需提交/报名等登录功能，请重新登录并更新 Cookie。"
+    //   "检测到 A  tCoder Cookie 可能已过期：已临时使用无 Cookie 访问公开页面。如需提交/报名等登录功能，请重新登录并更新 Cookie。"
     // );
   });
 
