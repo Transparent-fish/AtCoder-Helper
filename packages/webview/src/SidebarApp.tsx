@@ -3,6 +3,7 @@ import { Button, Spinner } from "@template/ui";
 import { useVSCode } from "./VSCodeProvider";
 import { useI18n } from "./i18n";
 import { SubmissionList } from "./components/SubmissionHistory";
+import { AiSettingsPanel } from "./components/AiSettingsPanel";
 import { useWebviewMessage } from "./hooks/useWebviewMessage";
 import { formatStart } from "./utils/format";
 import type { HomepageContest, SubmissionRecord } from "./types";
@@ -26,6 +27,11 @@ const SidebarApp: React.FC = () => {
     const [hasCookie, setHasCookie] = React.useState<boolean | null>(null);
     const [showLogin, setShowLogin] = React.useState(false);
     const [cookieInput, setCookieInput] = React.useState("");
+    const [showAiSettings, setShowAiSettings] = React.useState(false);
+    const [aiBaseUrl, setAiBaseUrl] = React.useState("");
+    const [aiModel, setAiModel] = React.useState("");
+    const [aiKeyInput, setAiKeyInput] = React.useState("");
+    const [hasAiKey, setHasAiKey] = React.useState(false);
     const currentContestRef = React.useRef<string | null>(null);
     currentContestRef.current = currentContest;
 
@@ -52,6 +58,17 @@ const SidebarApp: React.FC = () => {
         setStatus(t("cookie.cleared"));
     };
 
+    const handleAiSave = () => {
+        setStatus(t("ai.saved"));
+        vscode.postMessage({
+            command: "setAiConfig",
+            aiBaseUrl: aiBaseUrl.trim(),
+            aiModel: aiModel.trim(),
+            aiApiKey: aiKeyInput.trim(),
+        });
+        setAiKeyInput("");
+    };
+
     const fetchHistory = (contest: string) => {
         setLoadingHistory(true);
         setStatus(t("status.fetchingHistory", { contest }));
@@ -67,6 +84,7 @@ const SidebarApp: React.FC = () => {
     React.useEffect(() => {
         fetchContests();
         vscode.postMessage({ command: "getCookie" });
+        vscode.postMessage({ command: "getAiConfig" });
     }, []);
 
     useWebviewMessage({
@@ -108,6 +126,11 @@ const SidebarApp: React.FC = () => {
         loginRequired: () => {
             setShowLogin(true);
             setStatus(t("cookie.loginRequired"));
+        },
+        aiConfig: (message) => {
+            if (typeof message.aiBaseUrl === "string") setAiBaseUrl(message.aiBaseUrl);
+            if (typeof message.aiModel === "string") setAiModel(message.aiModel);
+            if (typeof message.hasAiKey === "boolean") setHasAiKey(message.hasAiKey);
         },
         error: (message) => {
             setStatus(message.text ?? t("err.operationFailed"));
@@ -159,6 +182,28 @@ const SidebarApp: React.FC = () => {
                         </Button>
                     )}
                 </div>
+            )}
+            <div className="p-2 border-b border-[var(--vscode-panel-border)]">
+                <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setShowAiSettings((v) => !v)}
+                    className="h-[24px] text-[11px] w-full"
+                >
+                    {showAiSettings ? t("ui.collapse") : t("ai.title")}
+                </Button>
+            </div>
+            {showAiSettings && (
+                <AiSettingsPanel
+                    baseUrl={aiBaseUrl}
+                    model={aiModel}
+                    hasAiKey={hasAiKey}
+                    apiKeyInput={aiKeyInput}
+                    onBaseUrlChange={setAiBaseUrl}
+                    onModelChange={setAiModel}
+                    onApiKeyChange={setAiKeyInput}
+                    onSave={handleAiSave}
+                />
             )}
             <div className="flex-1 flex flex-col min-h-0 border-b border-[var(--vscode-panel-border)]">
                 <div className="p-2 flex items-center justify-between border-b border-[var(--vscode-panel-border)]">

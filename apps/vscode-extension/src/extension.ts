@@ -65,6 +65,21 @@ function registerSetDeeplApiKey(context: vscode.ExtensionContext) {
   });
 }
 
+function registerSetAiApiKey(context: vscode.ExtensionContext) {
+  return vscode.commands.registerCommand("extension.setAiApiKey", async () => {
+    const key = await vscode.window.showInputBox({
+      prompt: t("ext.promptAiKey"),
+      password: true,
+      placeHolder: t("ext.placeholderAiKey"),
+      ignoreFocusOut: true,
+    });
+    if (key?.trim()) {
+      await context.secrets.store("aiApiKey", key.trim());
+      vscode.window.showInformationMessage(t("ext.aiKeySaved"));
+    }
+  });
+}
+
 function registerSetAtCoderCookie(context: vscode.ExtensionContext) {
   return vscode.commands.registerCommand("extension.setAtCoderCookie", async () => {
     const cookie = await vscode.window.showInputBox({
@@ -218,6 +233,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 
     context.subscriptions.push(registerSetDeeplApiKey(context));
+    context.subscriptions.push(registerSetAiApiKey(context));
     context.subscriptions.push(registerSetAtCoderCookie(context));
     context.subscriptions.push(
       vscode.commands.registerCommand("extension.showWebview", createShowWebview(context))

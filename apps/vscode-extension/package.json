@@ -33,6 +33,10 @@
       {
         "command": "extension.setAtCoderCookie",
         "title": "Set AtCoder Login Cookie"
+      },
+      {
+        "command": "extension.setAiApiKey",
+        "title": "Set AI API Key"
       }
     ],
     "viewsContainers": {
@@ -60,7 +64,7 @@
     "watch": "webpack --mode development --watch --progress",
     "dev": "webpack --mode development --watch --progress",
     "test": "node ./out/test/runTest.js",
-    "test:unit": "tsc -p tsconfig.test.json && node out-test/atcoder.test.js",
+    "test:unit": "tsc -p tsconfig.test.json && node out-test/atcoder.test.js && node out-test/ai.test.js",
     "lint": "eslint src --ext ts",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist && rm -rf out",
     "package": "vsce package --no-dependencies --allow-missing-repository --out ../../release/extension.vsix"

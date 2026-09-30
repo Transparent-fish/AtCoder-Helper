@@ -7,8 +7,8 @@ interface UseTranslationReturn {
     translatedCache: Record<string, Record<string, string>>;
     translated: Record<string, string> | null;
     translating: boolean;
-    translationMode: "api" | "free";
-    setTranslationMode: React.Dispatch<React.SetStateAction<"api" | "free">>;
+    translationMode: "api" | "free" | "ai";
+    setTranslationMode: React.Dispatch<React.SetStateAction<"api" | "free" | "ai">>;
     setTranslating: React.Dispatch<React.SetStateAction<boolean>>;
     translate: (problem: ContestProblem | null) => void;
     applyTranslation: (message: WebviewMessage) => void;
@@ -24,7 +24,7 @@ export function useTranslation(
     const [translatedCache, setTranslatedCache] = React.useState<Record<string, Record<string, string>>>({});
     const [translated, setTranslated] = React.useState<Record<string, string> | null>(null);
     const [translating, setTranslating] = React.useState(false);
-    const [translationMode, setTranslationMode] = React.useState<"api" | "free">("free");
+    const [translationMode, setTranslationMode] = React.useState<"api" | "free" | "ai">("free");
 
     const translate = (problem: ContestProblem | null) => {
         if (!problem) return;
