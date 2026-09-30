@@ -11,7 +11,10 @@ export interface IncomingMessage {
 	url?: string;
 	payload?: Record<string, string>;
 	targetLang?: string;
-	translationMode?: "api" | "free";
+	translationMode?: "api" | "free" | "ai";
+	aiBaseUrl?: string;
+	aiModel?: string;
+	aiApiKey?: string;
 	text?: string;
 	rated?: boolean;
 	problem?: AtCoderProblem;

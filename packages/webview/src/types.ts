@@ -77,7 +77,7 @@ export interface SubmissionDetail {
 
 export interface WebviewMessage {
   type?: string;
-  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'loginRequired' | 'registerContest' | 'copyMarkdown' | 'sendCph' | 'fetchSubmitPage' | 'submitCode' | 'fetchSubmissionHistory' | 'fetchSubmissionDetail' | 'openSubmission' | 'fetchStandings' | 'getContests' | 'openContest';
+  command?: 'alert' | 'error' | 'loadContest' | 'loadProblem' | 'openBrowser' | 'translate' | 'setApiKey' | 'setCookie' | 'getCookie' | 'getAiConfig' | 'setAiConfig' | 'loginRequired' | 'registerContest' | 'copyMarkdown' | 'sendCph' | 'fetchSubmitPage' | 'submitCode' | 'fetchSubmissionHistory' | 'fetchSubmissionDetail' | 'openSubmission' | 'fetchStandings' | 'getContests' | 'openContest';
   statusMessage?: string;
   text?: string;
   success?: boolean;
@@ -91,7 +91,11 @@ export interface WebviewMessage {
   payload?: Record<string, string>;
   url?: string;
   targetLang?: string;
-  translationMode?: "api" | "free";
+  translationMode?: "api" | "free" | "ai";
+  aiBaseUrl?: string;
+  aiModel?: string;
+  aiApiKey?: string;
+  hasAiKey?: boolean;
   translated?: Record<string, string>;
   tasks?: Array<{ label: string; value: string; url: string; status?: string }>;
   problem?: ContestProblem;

@@ -10,9 +10,9 @@ interface ProblemViewProps {
     problem: ContestProblem;
     translated: Record<string, string> | null;
     translating: boolean;
-    translationMode: "api" | "free";
+    translationMode: "api" | "free" | "ai";
     onTranslate: () => void;
-    onTranslationModeChange: (mode: "api" | "free") => void;
+    onTranslationModeChange: (mode: "api" | "free" | "ai") => void;
     onCopyMarkdown: () => void;
     onExportCph: () => void;
 }
@@ -53,12 +53,13 @@ const ProblemView: React.FC<ProblemViewProps> = ({
                     </Button>
                     <select
                         value={translationMode}
-                        onChange={(e) => onTranslationModeChange(e.target.value as "api" | "free")}
+                        onChange={(e) => onTranslationModeChange(e.target.value as "api" | "free" | "ai")}
                         className="h-[26px] text-[11px] px-1 rounded border border-[var(--vscode-input-border,#6e7681)] bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] outline-none"
                         title={t("ui.translationMode")}
                     >
                         <option value="free">{t("ui.free")}</option>
                         <option value="api">{t("ui.api")}</option>
+                        <option value="ai">{t("ui.ai")}</option>
                     </select>
                     <Button onClick={onCopyMarkdown} size="sm" variant="secondary" className="h-[26px] text-[11px]">
                         {t("ui.copyMarkdown")}

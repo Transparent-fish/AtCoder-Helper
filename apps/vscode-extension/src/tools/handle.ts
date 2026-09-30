@@ -3,6 +3,7 @@ import { AtCoderProblem, fetchAtCoderProblem, fetchAtCoderTasks } from "../atcod
 import { CfError, ProxyError, LoginRequiredError, setSessionCookie, fetchSubStatus, fetchSubmitHistory, getSessionCookie } from "./fetch";
 import { fetchContest, signedUpContest, fetchContestAnnouncement } from "./SignUpContest";
 import { translateTextRaw, translateTextFree } from "./deepl";
+import { translateTextAI, AiTranslateConfig } from "./ai";
 import { fetchSubmitPage, submitCodeWithRedirect } from "./submit";
 import { buildCphProblem, sendToCph } from "./cph";
 import { fetchStandings } from "./standings";
@@ -68,39 +69,102 @@ export async function handleTranslate(
     targetLang: string | undefined,
     context: vscode.ExtensionContext,
     send: (payload: Record<string, unknown>) => void,
-    translationMode?: "api" | "free",
+    translationMode?: "api" | "free" | "ai",
 ) {
     const lang = targetLang ?? "ZH";
     const texts = payload ?? {};
-    const translated: Record<string, string> = {};
     try {
-        if (translationMode === "free") {
-            for (const [key, value] of Object.entries(texts)) {
-                if (typeof value === "string" && value.trim()) {
-                    send({ type: "loading", text: t("load.translateItem", { name: key }) });
-                    translated[key] = await translateTextFree(value, lang);
-                }
-            }
-        } else {
-            const apiKey = await context.secrets.get("deeplApiKey");
-            if (!apiKey) {
-                const set = t("deepl.setKey");
-                const choice = await vscode.window.showErrorMessage(t("deepl.setKeyFirst"), set);
-                if (choice === set) vscode.commands.executeCommand("extension.setDeeplApiKey");
-                send({ type: "error", text: t("deepl.noKey") });
-                return;
-            }
-            for (const [key, value] of Object.entries(texts)) {
-                if (typeof value === "string" && value.trim()) {
-                    send({ type: "loading", text: t("load.translateItem", { name: key }) });
-                    translated[key] = await translateTextRaw(value, lang, apiKey);
-                }
-            }
-        }
+        const translateOne = await resolveTranslator(context, send, lang, translationMode);
+        if (!translateOne) return;
+        const translated = await translateAll(texts, send, translateOne);
         send({ type: "translation", translated });
     } catch (error) {
         send({ type: "error", text: error instanceof Error ? error.message : t("err.translate") });
     }
+}
+
+async function resolveTranslator(
+    context: vscode.ExtensionContext,
+    send: (payload: Record<string, unknown>) => void,
+    lang: string,
+    translationMode: "api" | "free" | "ai" | undefined,
+): Promise<((value: string) => Promise<string>) | null> {
+    if (translationMode === "free") {
+        return (value) => translateTextFree(value, lang);
+    }
+    if (translationMode === "ai") {
+        return createAiTranslator(context, send, lang);
+    }
+    const apiKey = await context.secrets.get("deeplApiKey");
+    if (!apiKey) {
+        const set = t("deepl.setKey");
+        const choice = await vscode.window.showErrorMessage(t("deepl.setKeyFirst"), set);
+        if (choice === set) vscode.commands.executeCommand("extension.setDeeplApiKey");
+        send({ type: "error", text: t("deepl.noKey") });
+        return null;
+    }
+    return (value) => translateTextRaw(value, lang, apiKey);
+}
+
+async function createAiTranslator(
+    context: vscode.ExtensionContext,
+    send: (payload: Record<string, unknown>) => void,
+    lang: string,
+): Promise<((value: string) => Promise<string>) | null> {
+    const apiKey = await context.secrets.get("aiApiKey");
+    if (!apiKey) {
+        const set = t("ai.setKey");
+        const choice = await vscode.window.showErrorMessage(t("ai.setKeyFirst"), set);
+        if (choice === set) vscode.commands.executeCommand("extension.setAiApiKey");
+        send({ type: "error", text: t("ai.noKey") });
+        return null;
+    }
+    const config = readAiConfig(context);
+    return (value) => translateTextAI(value, lang, config, apiKey);
+}
+
+async function translateAll(
+    texts: Record<string, string>,
+    send: (payload: Record<string, unknown>) => void,
+    translateOne: (value: string) => Promise<string>,
+): Promise<Record<string, string>> {
+    const translated: Record<string, string> = {};
+    for (const [key, value] of Object.entries(texts)) {
+        if (typeof value === "string" && value.trim()) {
+            send({ type: "loading", text: t("load.translateItem", { name: key }) });
+            translated[key] = await translateOne(value);
+        }
+    }
+    return translated;
+}
+
+const DEFAULT_AI_BASE_URL = "https://api.deepseek.com/v1";
+const DEFAULT_AI_MODEL = "deepseek-chat";
+
+function readAiConfig(context: vscode.ExtensionContext): AiTranslateConfig {
+    const baseUrl = context.globalState.get<string>("aiBaseUrl") || DEFAULT_AI_BASE_URL;
+    const model = context.globalState.get<string>("aiModel") || DEFAULT_AI_MODEL;
+    return { baseUrl, model };
+}
+
+export async function handleGetAiConfig(
+    context: vscode.ExtensionContext,
+    send: (payload: Record<string, unknown>) => void,
+) {
+    const config = readAiConfig(context);
+    const hasAiKey = !!(await context.secrets.get("aiApiKey"));
+    send({ type: "aiConfig", aiBaseUrl: config.baseUrl, aiModel: config.model, hasAiKey });
+}
+
+export async function handleSetAiConfig(
+    message: { aiBaseUrl?: string; aiModel?: string; aiApiKey?: string },
+    context: vscode.ExtensionContext,
+    send: (payload: Record<string, unknown>) => void,
+) {
+    if (message.aiBaseUrl?.trim()) await context.globalState.update("aiBaseUrl", message.aiBaseUrl.trim());
+    if (message.aiModel?.trim()) await context.globalState.update("aiModel", message.aiModel.trim());
+    if (message.aiApiKey?.trim()) await context.secrets.store("aiApiKey", message.aiApiKey.trim());
+    await handleGetAiConfig(context, send);
 }
 
 export async function handleProblemLoad(contest: string, task: string, send: (payload: Record<string, unknown>) => void) {

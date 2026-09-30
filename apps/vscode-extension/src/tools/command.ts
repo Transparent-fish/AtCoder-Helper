@@ -17,6 +17,8 @@ import {
   handleFetchStandings,
   handleGetContests,
   handleFetchSubmissionDetail,
+  handleGetAiConfig,
+  handleSetAiConfig,
 } from "./handle";
 
 const loadCommands = new Set(["loadContest", "loadProblem", "openBrowser"]);
@@ -25,6 +27,7 @@ const cookieCommands = new Set(["getCookie", "setCookie"]);
 const problemCommands = new Set(["registerContest", "copyMarkdown", "alert", "sendCph"]);
 const submitCommands = new Set(["fetchSubmitPage", "submitCode", "fetchSubmissionHistory", "fetchSubmissionDetail"]);
 const contestCommands = new Set(["fetchStandings", "getContests", "openContest", "openSubmission"]);
+const configCommands = new Set(["getAiConfig", "setAiConfig"]);
 
 export async function runCommand(message: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,) {
   if (loadCommands.has(message.command!)) await runLoadCommand(message, sendToWebview);
@@ -33,7 +36,21 @@ export async function runCommand(message: IncomingMessage, context: vscode.Exten
   else if (problemCommands.has(message.command!)) await runProblem(message, context, sendToWebview);
   else if (submitCommands.has(message.command!)) await runSubmit(message, context, sendToWebview);
   else if (contestCommands.has(message.command!)) await runContest(message, context, sendToWebview);
+  else if (configCommands.has(message.command!)) await runConfig(message, context, sendToWebview);
   else throw new Error(t("cmd.unknown"));
+}
+
+async function runConfig(command: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,): Promise<boolean> {
+  switch (command.command) {
+    case "getAiConfig":
+      await handleGetAiConfig(context, sendToWebview);
+      return true;
+    case "setAiConfig":
+      await handleSetAiConfig(command, context, sendToWebview);
+      return true;
+    default:
+      return false;
+  }
 }
 
 async function runContest(command: IncomingMessage, context: vscode.ExtensionContext, sendToWebview: (payload: Record<string, unknown>) => void,): Promise<boolean> {

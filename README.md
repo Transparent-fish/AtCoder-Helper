@@ -25,6 +25,7 @@ VS Code 插件，支持浏览 AtCoder 竞赛题目、LaTeX 数学公式渲染、
 - 📋 **题目浏览** — 输入比赛代号，一键加载所有题目列表与题面
 - 📐 **LaTeX 渲染** — 服务端 KaTeX 预渲染，WebView 直接展示
 - 🌐 **DeepL 翻译** — 题面段落自动翻译为中文（免费接口 / 官方 API 双模式）
+- 🤖 **AI 翻译** — 兼容 OpenAI 接口（默认 DeepSeek），侧边栏可配置 API 地址 / 模型 / Key，保留 HTML 与 KaTeX 公式
 - 📝 **报名比赛** — 支持评级（Rated）/ 非评级报名，自动处理 CSRF 与多步骤表单
 - 📤 **提交代码** — 内置提交面板，提交后自动轮询判题状态
 - 🧾 **提交历史 & 详情** — 查看个人提交列表、代码、逐测试点判定（Judge Result）
@@ -56,6 +57,7 @@ VS Code 插件，支持浏览 AtCoder 竞赛题目、LaTeX 数学公式渲染、
 │       │       ├── standings.ts        # 榜单 JSON 拉取
 │       │       ├── homepage.ts         # 首页比赛列表解析
 │       │       ├── deepl.ts            # DeepL 翻译（免费 / API）
+│       │       ├── ai.ts               # AI 翻译（OpenAI 兼容，默认 DeepSeek）
 │       │       ├── cph.ts              # CPH 问题构建与导出
 │       │       ├── copy.ts             # Markdown 复制
 │       │       ├── types.ts            # IncomingMessage / 提交记录类型
@@ -138,6 +140,15 @@ pnpm dev
 ### 设置 DeepL API Key（用于官方 API 翻译模式）
 
 `Ctrl+Shift+P` → `Set DeepL API Key`（免费模式无需配置）
+
+### 设置 AI 翻译（OpenAI 兼容接口）
+
+1. 侧边栏底部点击「AI 翻译设置」展开面板
+2. 填写 `API 地址`（默认 `https://api.deepseek.com/v1`）、`模型`（默认 `deepseek-chat`）与 `API Key`
+3. 点击「保存」；API Key 仅保存在 VS Code 加密凭据库中，不会明文保存
+4. 题面工具栏的翻译模式下拉选择「AI」即可
+
+也可用命令面板 `Set AI API Key` 单独设置 Key。任何 OpenAI 兼容服务（DeepSeek / OpenAI / 自建网关等）均可使用。
 
 ## 开发指南
 

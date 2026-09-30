@@ -16,7 +16,7 @@ export async function fetchContest(contest: string): Promise<ContestPage> {
     const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
     const title = titleMatch ? titleMatch[1].trim() : "Untitled";
     const formRegex = new RegExp(
-        `<form[^>]*action="[^"]*${contest}\/register"[^>]*>([\\s\\S]*?)<\\/form>`,
+        `<form[^>]*action="[^"]*${contest}/register"[^>]*>([\\s\\S]*?)<\\/form>`,
         "i"
     );
     const from = html.match(formRegex)?.[1];
